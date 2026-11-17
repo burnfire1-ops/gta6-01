@@ -1,19 +1,102 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<link rel="icon" href="data:,">
+<title>Teluk Cahaya — Open-World Crime</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1a33; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hidden { display: none !important; }
+  /* HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #f2ede4; }
+  .panel { background: rgba(14, 26, 51, 0.72); border: 1px solid rgba(242, 237, 228, 0.18); border-radius: 10px; padding: 8px 12px; }
+  #minimap-wrap { position: absolute; left: 16px; bottom: 16px; width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(242, 237, 228, 0.85); background: #16233d; }
+  #minimap { width: 100%; height: 100%; display: block; }
+  #bars { position: absolute; left: 16px; bottom: 204px; width: 180px; }
+  .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.18); margin-top: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 4px; }
+  #health-fill { background: #58c98a; width: 100%; }
+  #armor-fill { background: #5fb8d8; width: 0%; }
+  #money { margin-top: 6px; font-weight: 700; color: #f2c14e; }
+  #stars { position: absolute; top: 14px; right: 18px; font-size: 26px; letter-spacing: 4px; color: #f2c14e; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  #stars .off { color: rgba(255,255,255,0.25); }
+  #stars.blink { animation: blink 0.5s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  #objective { position: absolute; top: 14px; left: 16px; max-width: 380px; }
+  #objective h2 { margin: 0; font-size: 15px; color: #f2c14e; }
+  #objective p { margin: 2px 0 0; font-size: 13px; }
+  #prompt { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); font-size: 15px; }
+  #prompt b { background: #f2c14e; color: #0e1a33; border-radius: 4px; padding: 1px 7px; margin-right: 6px; }
+  #dialog { position: absolute; left: 50%; bottom: 170px; transform: translateX(-50%); max-width: 520px; text-align: center; font-size: 14px; }
+  #vehicle-info { position: absolute; right: 18px; bottom: 16px; text-align: right; }
+  #vehicle-info h3 { margin: 0; font-size: 15px; }
+  #toast { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); font-weight: 700; color: #f2c14e; opacity: 0; transition: opacity 0.3s; }
+  #toast.show { opacity: 1; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(216, 60, 60, 0); transition: box-shadow 0.2s; }
+  /* Menus */
+  .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f2ede4; background: linear-gradient(180deg, rgba(14,26,51,0.25), rgba(14,26,51,0.78)); }
+  .screen h1 { margin: 0; font-size: 56px; letter-spacing: 6px; color: #f2c14e; text-shadow: 0 4px 24px rgba(0,0,0,0.7); }
+  .screen p.sub { margin: 6px 0 28px; font-size: 16px; color: #d8e8f2; }
+  .menu { display: flex; flex-direction: column; gap: 10px; min-width: 260px; }
+  .menu button { pointer-events: auto; font-size: 16px; padding: 12px 18px; border-radius: 10px; border: 1px solid rgba(242,237,228,0.35); background: rgba(14,26,51,0.8); color: #f2ede4; cursor: pointer; }
+  .menu button:hover { background: #f2c14e; color: #0e1a33; border-color: #f2c14e; }
+  .menu button:disabled { opacity: 0.45; cursor: default; }
+  .controls-list { margin-top: 26px; font-size: 13px; line-height: 1.9; color: #c8d8e8; text-align: center; }
+  .controls-list b { color: #f2c14e; }
 </style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="Teluk Cahaya: game open-world crime orisinal"></canvas>
 <p id="status" role="status" aria-live="polite"></p>
+
+<div id="hud" class="hidden">
+  <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas></div>
+  <div id="bars">
+    <div class="bar"><i id="health-fill"></i></div>
+    <div class="bar"><i id="armor-fill"></i></div>
+    <div id="money">$150</div>
+  </div>
+  <div id="stars"><span class="off">★★★★★</span></div>
+  <div id="objective" class="panel"><h2>Teluk Cahaya</h2><p>Jelajahi kota. Temui pemberi misi di boulevard.</p></div>
+  <div id="prompt" class="panel hidden"></div>
+  <div id="dialog" class="panel hidden"></div>
+  <div id="vehicle-info" class="panel hidden"><h3 id="vehicle-name"></h3><div class="bar"><i id="vehicle-health"></i></div></div>
+  <div id="toast"></div>
+</div>
+<div id="vignette"></div>
+
+<div id="title" class="screen">
+  <h1>TELUK CAHAYA</h1>
+  <p class="sub">Kota yang hidup, polisi yang mengejar, cerita yang selesai.</p>
+  <div class="menu">
+    <button id="btn-new">New Game</button>
+    <button id="btn-continue" disabled>Continue</button>
+    <button id="btn-controls" data-todo>Controls</button>
+  </div>
+  <div class="controls-list">
+    <b>WASD</b> gerak &nbsp;·&nbsp; <b>Mouse</b> kamera &nbsp;·&nbsp; <b>Shift</b> lari &nbsp;·&nbsp; <b>Space</b> lompat / handbrake<br>
+    <b>F</b> interaksi / masuk mobil &nbsp;·&nbsp; <b>Klik kiri</b> serang &nbsp;·&nbsp; <b>Klik kanan</b> bidik &nbsp;·&nbsp; <b>Esc</b> pause
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <h1 style="font-size:36px">PAUSE</h1>
+  <p class="sub">Teluk Cahaya menunggu.</p>
+  <div class="menu">
+    <button id="btn-resume">Resume</button>
+    <button id="btn-save" data-todo>Save</button>
+    <button id="btn-load" data-todo>Load</button>
+    <button id="btn-settings" data-todo>Settings</button>
+    <button id="btn-quit">Quit to Title</button>
+  </div>
+</div>
+
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

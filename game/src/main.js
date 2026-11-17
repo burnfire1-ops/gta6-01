@@ -1,134 +1,183 @@
-// Boot and the one loop: input is read every frame, the world advances in fixed 1/60 s steps
-// (several in a slow frame, none in a fast one), and the renderer paints what is there. The game
-// moves between four screens: title, play, paused and game over.
-//
-// ?seed=N fixes the falling pattern. ?shot=start|play|end (with &seed=N) stages that scene
-// instead of running the loop, paints it twice and sets window.__shotReady for a screenshot.
-import { BEST_KEY, LIVES, STEP } from './config.js';
-import { createRandom } from './random.js';
-import { createWorld, EVENT_HIT, EVENT_OVER } from './world.js';
-import { ACTION_CONFIRM, ACTION_PAUSE, createInput } from './input.js';
-import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
-import { stageShot } from './shots.js';
+// Teluk Cahaya — boot, main loop, camera, shot hooks.
+// Sim is pure data (src/core); render modules are views. No network, no audio
+// files, no Rockstar content: everything is original and procedural.
+import * as THREE from 'three';
+import { createCity } from './core/city.js';
+import { createState } from './core/state.js';
+import { clockFromTime, DAY_LENGTH } from './core/clock.js';
+import { updatePlayer } from './core/player.js';
+import { createInput } from './input/input.js';
+import { createRenderer } from './render/renderer.js';
+import { createCityRender } from './render/city-render.js';
+import { makePerson, syncPerson } from './render/characters-render.js';
 
-/** The longest frame the loop catches up on; a longer stall (a hidden tab) is dropped, not replayed. */
-const MAX_FRAME = 0.25;
+const params = new URLSearchParams(location.search);
+const seed = parseInt(params.get('seed') || '1', 10) || 1;
+const shot = params.get('shot') || '';
 
-const params = new URLSearchParams(window.location.search);
-const shot = params.get('shot');
-const seedParam = Number.parseInt(params.get('seed') ?? '', 10);
-const seed = Number.isInteger(seedParam) ? seedParam : Math.floor(Math.random() * 4294967296);
+const state = createState(seed);
+const city = createCity(seed);
+const canvas = document.querySelector('#game');
+const { renderer, scene, camera, update: updateLights } = createRenderer(canvas);
+const cityRender = createCityRender(scene, city);
+const playerMesh = makePerson({ jacket: 0xf2b234, pants: 0x2a3242, skin: 0xc98a5e, cap: 0x1d2f52 });
+scene.add(playerMesh);
+const input = createInput();
+input.attach(canvas);
 
-const canvas = document.getElementById('game');
-const status = document.getElementById('status');
-const world = createWorld(createRandom(seed));
-const renderer = createRenderer(canvas);
+// Clock starts at 08:00: state.time is session seconds, clock = f(time + offset).
+const CLOCK_OFFSET = 0.08 * DAY_LENGTH;
+state.clock = clockFromTime(state.time + CLOCK_OFFSET);
 
-function readBest() {
-  try {
-    return Number.parseInt(window.localStorage.getItem(BEST_KEY) ?? '0', 10) || 0;
-  } catch {
-    return 0;
-  }
+const hud = {
+  title: document.querySelector('#title'),
+  pause: document.querySelector('#pause'),
+  hud: document.querySelector('#hud'),
+  toast: document.querySelector('#toast'),
+};
+let toastT = null;
+function showToast(text) {
+  hud.toast.textContent = text;
+  hud.toast.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => hud.toast.classList.remove('show'), 2200);
 }
 
-function saveBest(value) {
-  try {
-    window.localStorage.setItem(BEST_KEY, String(value));
-  } catch {
-    // Storage can be off (private windows): the best score then lasts this visit only.
-  }
+function startGame() {
+  state.mode = 'playing';
+  hud.title.classList.add('hidden');
+  hud.pause.classList.add('hidden');
+  hud.hud.classList.remove('hidden');
+  state.events.emit('gameStarted', {});
+  canvas.focus();
 }
-
-function runShot(name) {
-  const scene = stageShot(name, world);
-  let painted = 0;
-  function paint() {
-    renderer.draw(world.state, scene.screen, scene.best);
-    painted += 1;
-    if (painted < 2) requestAnimationFrame(paint);
-    else window.__shotReady = true;
-  }
-  requestAnimationFrame(paint);
+function quitToTitle() {
+  state.mode = 'title';
+  hud.title.classList.remove('hidden');
+  hud.hud.classList.add('hidden');
+  hud.pause.classList.add('hidden');
 }
+document.querySelector('#btn-new').addEventListener('click', startGame);
+document.querySelector('#btn-resume').addEventListener('click', () => {
+  state.mode = 'playing';
+  hud.pause.classList.add('hidden');
+});
+document.querySelector('#btn-quit').addEventListener('click', quitToTitle);
+document.querySelectorAll('[data-todo]').forEach((el) => {
+  el.addEventListener('click', () => showToast('Segera hadir di build berikutnya.'));
+});
 
-function runGame() {
-  const input = createInput(canvas);
-  let screen = SCREEN_TITLE;
-  let best = readBest();
-  let accumulator = 0;
-  let last = performance.now();
-
-  // Screen readers (and anyone watching the page's text) hear the screen changes and each hit.
-  function announce(message) {
-    status.textContent = message;
+// Third-person camera: orbit by mouse (drag or pointer lock), spring-arm style
+// pull-in when a building blocks the view. Driving switches to chase camera.
+const camTarget = new THREE.Vector3();
+function updateCamera(dt) {
+  const p = state.player;
+  const smooth = 1 - Math.exp(-10 * dt);
+  if (state.mode === 'title') {
+    const t = state.time * 0.02;
+    camera.position.set(Math.sin(t) * 150, 70, Math.cos(t) * 150);
+    camera.lookAt(0, 0, -40);
+    camera.fov = 55;
+    camera.updateProjectionMatrix();
+    return;
   }
-
-  function startGame() {
-    world.reset();
-    accumulator = 0;
-    screen = SCREEN_PLAY;
-    announce(`Playing. ${LIVES} lives.`);
-  }
-
-  function endGame() {
-    screen = SCREEN_OVER;
-    if (world.state.score > best) {
-      best = world.state.score;
-      saveBest(best);
-    }
-    announce(`Game over. Score ${world.state.score}. Best ${best}.`);
-  }
-
-  function handleActions() {
-    const actions = input.takeActions();
-    if (actions & ACTION_CONFIRM && (screen === SCREEN_TITLE || screen === SCREEN_OVER)) startGame();
-    else if (actions & ACTION_PAUSE && screen === SCREEN_PLAY) {
-      screen = SCREEN_PAUSED;
-      announce('Paused.');
-    } else if (actions & (ACTION_PAUSE | ACTION_CONFIRM) && screen === SCREEN_PAUSED) {
-      screen = SCREEN_PLAY;
-      announce('Playing.');
-    }
-  }
-
-  function step() {
-    if (screen === SCREEN_TITLE) {
-      world.step(STEP, 0, true);
+  let yaw, pitch, dist;
+  if (!p.onFoot && p.vehicleId !== null) {
+    const v = state.vehicles.find((x) => x.id === p.vehicleId);
+    if (v) {
+      const fovT = Math.min(1, Math.abs(v.speed) / 30);
+      camera.fov += ((58 + fovT * 10) - camera.fov) * smooth;
+      camera.updateProjectionMatrix();
+      yaw = Math.atan2(Math.sin(v.heading), Math.cos(v.heading));
+      pitch = 0.22; dist = 11;
+      camTarget.set(v.x + Math.sin(v.heading) * 8, 1.6, v.z + Math.cos(v.heading) * 8);
+      const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+      const pos = camTarget.clone().addScaledVector(dir, -dist);
+      pos.y = Math.max(1.2, pos.y);
+      camera.position.lerp(pos, smooth);
+      camera.lookAt(camTarget);
       return;
     }
-    const events = world.step(STEP, input.direction(), false);
-    if (events & EVENT_OVER) endGame();
-    else if (events & EVENT_HIT) announce(world.state.lives === 1 ? 'Hit. 1 life left.' : `Hit. ${world.state.lives} lives left.`);
   }
-
-  function frame(now) {
-    requestAnimationFrame(frame);
-    accumulator += Math.min((now - last) / 1000, MAX_FRAME);
-    last = now;
-    handleActions();
-    if (screen === SCREEN_TITLE || screen === SCREEN_PLAY) {
-      while (accumulator >= STEP && (screen === SCREEN_TITLE || screen === SCREEN_PLAY)) {
-        step();
-        accumulator -= STEP;
-      }
-    } else {
-      accumulator = 0;
-    }
-    renderer.draw(world.state, screen, best);
+  camera.fov += (60 - camera.fov) * smooth;
+  camera.updateProjectionMatrix();
+  yaw = input.camYaw; pitch = input.camPitch; dist = input.camDist;
+  const vx = p.vx || 0, vz = p.vz || 0;
+  camTarget.set(p.x + vx * 0.25, 1.7 + p.y, p.z + vz * 0.25);
+  const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  // Spring arm: step the distance down until the camera is out of buildings.
+  let pos = null;
+  for (const d of [dist, 6, 4, 2.5]) {
+    const tryPos = camTarget.clone().addScaledVector(dir, -d);
+    tryPos.y = Math.max(0.8, tryPos.y);
+    const c = city.collideCircle(tryPos.x, tryPos.z, 1);
+    if (!c.hit || d === 2.5) { pos = tryPos; break; }
   }
-
-  // Leaving the tab pauses a running game rather than letting blocks fall unseen.
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden && screen === SCREEN_PLAY) {
-      screen = SCREEN_PAUSED;
-      announce('Paused.');
-    }
-  });
-
-  announce('Block Dodger. Press Space or click to start.');
-  requestAnimationFrame(frame);
+  camera.position.lerp(pos, smooth);
+  camera.lookAt(camTarget);
 }
 
-if (shot) runShot(shot);
-else runGame();
+// Shot hooks (?shot=name&seed=N): deterministic scene setups for screenshots.
+function applyShot(name) {
+  if (name === 'start') { state.mode = 'title'; return; }
+  if (name === 'night') {
+    state.time = (0.62 * DAY_LENGTH) - CLOCK_OFFSET; // ~21:00 neon district
+    state.player.x = 200; state.player.z = -160; state.player.heading = Math.PI;
+    input.camYaw = Math.PI;
+    startGame();
+    return;
+  }
+  if (name === 'chase' || name === 'hud') {
+    // Police + missions slices implement these; fall back to the cover setup.
+    console.warn(`shot "${name}" not implemented yet, falling back to cover`);
+  }
+  // cover (default): 10:00 on the boulevard, Raka walking west down the
+  // street, sunlit facades ahead, glass tower behind the camera view.
+  state.time = (0.167 * DAY_LENGTH) - CLOCK_OFFSET; // ~10:00
+  state.player.x = -40; state.player.z = -200;
+  state.player.heading = -Math.PI / 2;
+  input.camYaw = -Math.PI / 2;
+  startGame();
+}
+
+const timer = new THREE.Timer();
+let frames = 0, shotFrames = 0, fpsEma = 60, lastFpsT = performance.now();
+function loop() {
+  timer.update();
+  const dt = Math.min(Math.max(timer.getDelta(), 0), 0.1);
+  state.time += dt;
+  state.clock = clockFromTime(state.time + CLOCK_OFFSET);
+  if (state.mode === 'playing') {
+    input.update(state.settings);
+    if (input.actions.pause) {
+      state.mode = 'paused';
+      hud.pause.classList.add('hidden');
+      hud.pause.classList.remove('hidden');
+    } else {
+      updatePlayer(state, input, dt, city);
+    }
+  }
+  updateCamera(dt);
+  updateLights(state);
+  cityRender.sync(state);
+  state.events.emit('frame', { dt });
+  syncPerson(playerMesh, state.player.x, state.player.y, state.player.z,
+    state.player.heading, state.player.speed || 0, dt, state.player.punchT);
+  renderer.render(scene, camera);
+  frames++; shotFrames++;
+  const now = performance.now();
+  if (now - lastFpsT > 500) {
+    fpsEma = fpsEma * 0.5 + (frames * 1000 / (now - lastFpsT)) * 0.5;
+    state.debug.fps = Math.round(fpsEma);
+    state.debug.drawCalls = renderer.info.render.calls;
+    frames = 0; lastFpsT = now;
+  }
+  if (shot && shotFrames === 30) window.__shotReady = true;
+}
+
+window.addEventListener('error', (e) => { window.__error = String(e.message); });
+window.__game = { state, city, renderer, scene, input, startGame, showToast };
+window.__version = 'teluk-cahaya-0.1-foundation';
+
+if (shot) applyShot(shot);
+renderer.setAnimationLoop(loop);
