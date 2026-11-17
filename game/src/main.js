@@ -194,7 +194,13 @@ loadSystems({ state, city, scene, renderer, camera, input, startGame, quitToTitl
     systemsHandle = handle;
     window.__systems = handle;
     if (!handle.loaded.has('menus')) wireFallbackMenus();
+    // Deferred shot setups (chase/hud) need the missions slice.
+    if (shot === 'chase' || shot === 'hud') {
+      const missions = handle.loaded.get('missions');
+      if (missions?.setupShot) missions.setupShot(shot, state, city, input, startGame);
+      else applyShot(shot); // falls back to cover
+    }
   });
 
-if (shot) applyShot(shot);
+if (shot && shot !== 'chase' && shot !== 'hud') applyShot(shot);
 renderer.setAnimationLoop(loop);
