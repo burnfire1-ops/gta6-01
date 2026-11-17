@@ -7,6 +7,7 @@ import { createState } from './core/state.js';
 import { clockFromTime, DAY_LENGTH } from './core/clock.js';
 import { updatePlayer } from './core/player.js';
 import { createInput } from './input/input.js';
+import { enterVehicle } from './core/vehicles.js';
 import { createRenderer } from './render/renderer.js';
 import { createCityRender } from './render/city-render.js';
 import { makePerson, syncPerson } from './render/characters-render.js';
@@ -94,12 +95,11 @@ function updateCamera(dt) {
       const fovT = Math.min(1, Math.abs(v.speed) / 30);
       camera.fov += ((58 + fovT * 10) - camera.fov) * smooth;
       camera.updateProjectionMatrix();
-      yaw = Math.atan2(Math.sin(v.heading), Math.cos(v.heading));
-      pitch = 0.22; dist = 11;
-      camTarget.set(v.x + Math.sin(v.heading) * 8, 1.6, v.z + Math.cos(v.heading) * 8);
-      const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-      const pos = camTarget.clone().addScaledVector(dir, -dist);
-      pos.y = Math.max(1.2, pos.y);
+      // Chase cam: high behind the car, looking ahead down the road, so the
+      // car's own roof never fills the frame (it sits in the lower third).
+      const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
+      camTarget.set(v.x + fx * 7, 1.4, v.z + fz * 7);
+      const pos = new THREE.Vector3(v.x - fx * 8.5, 3.6, v.z - fz * 8.5);
       camera.position.lerp(pos, smooth);
       camera.lookAt(camTarget);
       return;
@@ -125,11 +125,24 @@ function updateCamera(dt) {
 
 // Shot hooks (?shot=name&seed=N): deterministic scene setups for screenshots.
 function applyShot(name) {
+  // __shotReady must fire 30 frames AFTER the shot is applied (slices load
+  // async; counting from boot would fire before the scene is staged).
+  shotFrames = 0;
+  window.__shotReady = false;
   if (name === 'start') { state.mode = 'title'; return; }
   if (name === 'night') {
     state.time = (0.62 * DAY_LENGTH) - CLOCK_OFFSET; // ~21:00 neon district
-    state.player.x = 200; state.player.z = -160; state.player.heading = Math.PI;
-    input.camYaw = Math.PI;
+    // Neon night driving: Raka coasting in his teal sport car up the neon
+    // district avenue, lamps + lit windows ahead, chase cam behind.
+    const hero = state.vehicles.find((v) => v.owned);
+    if (hero) {
+      hero.x = 200; hero.z = -160; hero.heading = Math.PI; hero.speed = 12;
+      hero.parked = false;
+      enterVehicle(state, hero);
+    } else {
+      state.player.x = 200; state.player.z = -160; state.player.heading = Math.PI;
+      input.camYaw = Math.PI;
+    }
     startGame();
     return;
   }
@@ -138,9 +151,9 @@ function applyShot(name) {
     console.warn(`shot "${name}" not implemented yet, falling back to cover`);
   }
   // cover (default): 10:00 on the boulevard, Raka walking west down the
-  // street, sunlit facades ahead, glass tower behind the camera view.
+  // street, his teal sport car parked ahead, sunlit facades on both sides.
   state.time = (0.167 * DAY_LENGTH) - CLOCK_OFFSET; // ~10:00
-  state.player.x = -40; state.player.z = -200;
+  state.player.x = -120; state.player.z = -196;
   state.player.heading = -Math.PI / 2;
   input.camYaw = -Math.PI / 2;
   startGame();
@@ -169,8 +182,13 @@ function loop() {
   cityRender.sync(state);
   if (systemsHandle) systemsHandle.sync(state, dt);
   state.events.emit('frame', { dt });
-  syncPerson(playerMesh, state.player.x, state.player.y, state.player.z,
-    state.player.heading, state.player.speed || 0, dt, state.player.punchT);
+  // The driver sits inside the car: hide the on-foot mesh while driving,
+  // otherwise Raka stands through the roof (visible in chase shots).
+  playerMesh.visible = state.player.onFoot;
+  if (state.player.onFoot) {
+    syncPerson(playerMesh, state.player.x, state.player.y, state.player.z,
+      state.player.heading, state.player.speed || 0, dt, state.player.punchT);
+  }
   renderer.render(scene, camera);
   frames++; shotFrames++;
   const now = performance.now();
@@ -199,8 +217,13 @@ loadSystems({ state, city, scene, renderer, camera, input, startGame, quitToTitl
       const missions = handle.loaded.get('missions');
       if (missions?.setupShot) missions.setupShot(shot, state, city, input, startGame);
       else applyShot(shot); // falls back to cover
+    } else if (shot) {
+      // cover / night / start — after slices load (night needs the hero car).
+      applyShot(shot);
     }
+    // Count the 30 ready-frames from the staged shot, not from boot.
+    shotFrames = 0;
+    window.__shotReady = false;
   });
 
-if (shot && shot !== 'chase' && shot !== 'hud') applyShot(shot);
 renderer.setAnimationLoop(loop);

@@ -8,6 +8,7 @@ let ctxRef = null;
 let els = {};
 let prevMoney = null;
 let prevHealth = null;
+let prevOnFoot = null;
 let objectiveBase = '';
 let vignetteTimer = null;
 let dialogTimer = null;
@@ -139,6 +140,12 @@ function onFrame() {
   const s = ctxRef.state;
   if (!s || s.mode !== 'playing') return;
   if (s.player && !s.player.onFoot) renderVehicleHealth();
+  // Ammo visibility follows onFoot; shots can set driving state directly
+  // without emitting vehicleEntered, so re-check cheaply each frame.
+  if (s.player && s.player.onFoot !== prevOnFoot) {
+    prevOnFoot = s.player.onFoot;
+    renderAmmo();
+  }
   renderObjectiveDistance();
   renderPrompt(s.uiPrompt);
 }

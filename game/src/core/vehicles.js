@@ -204,7 +204,7 @@ function exitVehicle(state, vehicle) {
   state.events.emit('vehicleExited', { name: vehicleName(vehicle), health: vehicle.health });
 }
 
-function enterVehicle(state, vehicle) {
+export function enterVehicle(state, vehicle) {
   const p = state.player;
   const wasParked = vehicle.parked;
   const wasOwned = !!vehicle.owned;
