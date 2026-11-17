@@ -35,11 +35,11 @@ export function updatePlayer(state, input, dt, city) {
     p.y += p.vy * dt;
     if (p.y <= 0) { p.y = 0; p.vy = 0; p.grounded = true; }
   }
-  // Punch timer (combat resolution lives in the missions/police slices).
+  // Punch anim only (combat slice owns the 'punch' event + resolution,
+  // one emit per swing; aiming fires the pistol, not a punch).
   if (p.punchT > 0) p.punchT -= dt;
-  if (a.attack && p.punchT <= 0) {
+  if (a.attack && !a.aim && p.punchT <= 0) {
     p.punchT = 0.32;
     p.punchKind = (p.punchKind + 1) % 2;
-    state.events.emit('punch', { kind: p.punchKind });
   }
 }

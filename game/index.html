@@ -32,6 +32,7 @@
   #prompt b { background: #f2c14e; color: #0e1a33; border-radius: 4px; padding: 1px 7px; margin-right: 6px; }
   #dialog { position: absolute; left: 50%; bottom: 170px; transform: translateX(-50%); max-width: 520px; text-align: center; font-size: 14px; }
   #vehicle-info { position: absolute; right: 18px; bottom: 16px; text-align: right; }
+  #ammo { position: absolute; right: 18px; bottom: 64px; font-size: 14px; font-weight: 700; }
   #vehicle-info h3 { margin: 0; font-size: 15px; }
   #toast { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); font-weight: 700; color: #f2c14e; opacity: 0; transition: opacity 0.3s; }
   #toast.show { opacity: 1; }
@@ -67,6 +68,7 @@
   <div id="prompt" class="panel hidden"></div>
   <div id="dialog" class="panel hidden"></div>
   <div id="vehicle-info" class="panel hidden"><h3 id="vehicle-name"></h3><div class="bar"><i id="vehicle-health"></i></div></div>
+  <div id="ammo" class="panel">🔫 <span id="ammo-mag">12</span> / <span id="ammo-reserve">48</span></div>
   <div id="toast"></div>
 </div>
 <div id="vignette"></div>

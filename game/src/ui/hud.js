@@ -43,6 +43,14 @@ function renderHealth() {
   prevHealth = s.health;
 }
 
+function renderAmmo() {
+  const a = ctxRef.state.ammo || { mag: 0, reserve: 0 };
+  els.ammoMag.textContent = a.mag;
+  els.ammoReserve.textContent = a.reserve;
+  // Hide while driving (no shooting from cars); show on foot.
+  els.ammo.classList.toggle('hidden', !!ctxRef.state.player && !ctxRef.state.player.onFoot);
+}
+
 function flashVignette() {
   if (!els.vignette) return;
   els.vignette.style.boxShadow = 'inset 0 0 120px rgba(216,60,60,0.6)';
@@ -106,6 +114,7 @@ function renderVehicleEntered(data) {
   els.vehicleName.textContent = vehicleLabel(v);
   els.vehicleInfo.classList.remove('hidden');
   renderVehicleHealth();
+  renderAmmo();
 }
 
 function stateVehicle(s) {
@@ -122,6 +131,7 @@ function renderVehicleHealth() {
 
 function renderVehicleExited() {
   els.vehicleInfo.classList.add('hidden');
+  renderAmmo();
 }
 
 // Cheap per-frame work only: vehicle health bar, objective distance, prompt.
@@ -174,11 +184,15 @@ export function init(ctx) {
     vehicleInfo: $('vehicle-info'),
     vehicleName: $('vehicle-name'),
     vehicleHealth: $('vehicle-health'),
+    ammo: $('ammo'),
+    ammoMag: $('ammo-mag'),
+    ammoReserve: $('ammo-reserve'),
     vignette: $('vignette'),
   };
   const ev = ctx.state.events;
   ev.on('moneyChanged', renderMoney);
   ev.on('healthChanged', renderHealth);
+  ev.on('ammoChanged', renderAmmo);
   ev.on('wantedChanged', renderStars);
   ev.on('objectiveChanged', renderObjective);
   ev.on('dialog', showDialog);
@@ -194,6 +208,7 @@ export function init(ctx) {
   prevHealth = null;
   renderMoney();
   renderHealth();
+  renderAmmo();
   renderStars();
   renderObjective();
   initMinimap(ctx);

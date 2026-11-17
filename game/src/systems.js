@@ -11,6 +11,8 @@ const SLICES = [
   ['pedestriansRender', './render/pedestrians-render.js'],
   ['wanted', './core/wanted.js'],
   ['police', './core/police.js'],
+  ['combat', './core/combat.js'],
+  ['combatRender', './render/combat-render.js'],
   ['missions', './core/missions.js'],
   ['missionMarkers', './render/mission-markers.js'],
   ['hud', './ui/hud.js'],
