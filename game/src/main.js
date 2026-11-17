@@ -10,6 +10,7 @@ import { createInput } from './input/input.js';
 import { createRenderer } from './render/renderer.js';
 import { createCityRender } from './render/city-render.js';
 import { makePerson, syncPerson } from './render/characters-render.js';
+import { loadSystems } from './systems.js';
 
 const params = new URLSearchParams(location.search);
 const seed = parseInt(params.get('seed') || '1', 10) || 1;
@@ -57,15 +58,20 @@ function quitToTitle() {
   hud.hud.classList.add('hidden');
   hud.pause.classList.add('hidden');
 }
-document.querySelector('#btn-new').addEventListener('click', startGame);
-document.querySelector('#btn-resume').addEventListener('click', () => {
-  state.mode = 'playing';
-  hud.pause.classList.add('hidden');
-});
-document.querySelector('#btn-quit').addEventListener('click', quitToTitle);
-document.querySelectorAll('[data-todo]').forEach((el) => {
-  el.addEventListener('click', () => showToast('Segera hadir di build berikutnya.'));
-});
+// Menu buttons are wired by ui/menus.js (systems registry). Fallback wiring
+// below runs only if the menus slice is absent, so the title screen always works.
+let systemsHandle = null;
+function wireFallbackMenus() {
+  document.querySelector('#btn-new').addEventListener('click', startGame);
+  document.querySelector('#btn-resume').addEventListener('click', () => {
+    state.mode = 'playing';
+    hud.pause.classList.add('hidden');
+  });
+  document.querySelector('#btn-quit').addEventListener('click', quitToTitle);
+  document.querySelectorAll('[data-todo]').forEach((el) => {
+    el.addEventListener('click', () => showToast('Segera hadir di build berikutnya.'));
+  });
+}
 
 // Third-person camera: orbit by mouse (drag or pointer lock), spring-arm style
 // pull-in when a building blocks the view. Driving switches to chase camera.
@@ -155,11 +161,13 @@ function loop() {
       hud.pause.classList.remove('hidden');
     } else {
       updatePlayer(state, input, dt, city);
+      if (systemsHandle) systemsHandle.update(state, input, dt);
     }
   }
   updateCamera(dt);
   updateLights(state);
   cityRender.sync(state);
+  if (systemsHandle) systemsHandle.sync(state, dt);
   state.events.emit('frame', { dt });
   syncPerson(playerMesh, state.player.x, state.player.y, state.player.z,
     state.player.heading, state.player.speed || 0, dt, state.player.punchT);
@@ -178,6 +186,15 @@ function loop() {
 window.addEventListener('error', (e) => { window.__error = String(e.message); });
 window.__game = { state, city, renderer, scene, input, startGame, showToast };
 window.__version = 'teluk-cahaya-0.1-foundation';
+
+// Load gameplay slices (vehicles, traffic, police, missions, HUD, audio, save)
+// if their files exist; missing slices are skipped with a console warning.
+loadSystems({ state, city, scene, renderer, camera, input, startGame, quitToTitle, showToast })
+  .then((handle) => {
+    systemsHandle = handle;
+    window.__systems = handle;
+    if (!handle.loaded.has('menus')) wireFallbackMenus();
+  });
 
 if (shot) applyShot(shot);
 renderer.setAnimationLoop(loop);
