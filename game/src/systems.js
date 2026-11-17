@@ -24,8 +24,10 @@ export async function loadSystems(ctx) {
   for (const [key, path] of SLICES) {
     try {
       // HEAD-check first: a missing file skips silently instead of logging
-      // a console 404 from the dynamic import.
-      const probe = await fetch(path, { method: 'HEAD' });
+      // a console 404 from the dynamic import. Resolve against this module's
+      // URL: a bare fetch() resolves against the document base (/) and would
+      // 404 every slice.
+      const probe = await fetch(new URL(path, import.meta.url), { method: 'HEAD' });
       if (!probe.ok) { console.warn(`[systems] ${key} absent, skipped`); continue; }
       const mod = await import(path);
       if (mod.init) await mod.init(ctx);
