@@ -1,22 +1,22 @@
-// Teluk Cahaya — wanted slice (core sim, pure: no three.js).
-// Owns state.wanted: the witnessed meter, the hide timer, escape rules
-// (search circle, profile swap, alley stop, safehouse, respray) and the
-// BUSTED / WASTED outcomes. Police perception writes
-// state.wanted.seenByPolice; this module only reads it (one frame of lag
-// is accepted: wanted updates before police in the slice order).
-// Genre rules: open-world-crime skill §1-§2.
+// Teluk Cahaya — wanted system (core simulation, pure: no three.js).
+// Owns state.wanted: the witnessed meter, hide timer, escape routes
+// (search circle, car swap, alley stop, safehouse, respray) and BUSTED/WASTED.
+// Police perception writes state.wanted.seenByPolice; this module only reads
+// it (one frame of lag is accepted: wanted updates before police).
+// Genre rules: open-world-crime §1-§2 — witnessed, never omniscient.
 
+// How long the player must stay unseen before one star drops.
 export function hideThresholdFor(stars) {
   if (stars >= 4) return 15;
   if (stars === 3) return 10;
   return 6; // 1-2 stars
 }
 
+// Distance from a point to the nearest building AABB (0 when inside one).
 function distToBuildings(city, x, z) {
-  // Distance from a point to the nearest building AABB (0 when inside).
   let best = Infinity;
-  const list = city.buildings || [];
-  for (const b of list) {
+  const buildings = city.buildings || [];
+  for (const b of buildings) {
     const dx = Math.max(b.minX - x, 0, x - b.maxX);
     const dz = Math.max(b.minZ - z, 0, z - b.maxZ);
     const d = Math.hypot(dx, dz);
@@ -26,6 +26,7 @@ function distToBuildings(city, x, z) {
   return best;
 }
 
+// Put the player on foot and leave the car parked where it stands.
 function exitPlayerVehicle(state) {
   const p = state.player;
   if (p.vehicleId !== null && p.vehicleId !== undefined) {
@@ -46,16 +47,16 @@ function clearWanted(state) {
   w.captureT = 0;
   w.searchCircle = null;
 }
-
+// Caught: pay the fine, lose the wanted level, wake at the police station.
 function doBusted(state, ctx) {
   const w = state.wanted;
   const fine = Math.min(state.money, 100 + w.stars * 50);
   state.money -= fine;
   clearWanted(state);
-  const ps = ctx.city.pois.policeStation;
+  const station = ctx.city.pois.policeStation;
   exitPlayerVehicle(state);
   const p = state.player;
-  p.x = ps.x; p.z = ps.z; p.y = 0; p.vy = 0; p.grounded = true;
+  p.x = station.x; p.z = station.z; p.y = 0; p.vy = 0; p.grounded = true;
   p.heading = Math.PI;
   state.health = 100;
   state.events.emit('healthChanged', { health: state.health });
@@ -64,15 +65,15 @@ function doBusted(state, ctx) {
   state.events.emit('wantedChanged', { stars: 0 });
   if (ctx.showToast) ctx.showToast(`Tertangkap! Denda $${fine}.`);
 }
-
+// Knocked out with no wanted level: smaller fine, wake at the safehouse.
 function doWasted(state, ctx) {
   const fine = Math.min(state.money, 50);
   state.money -= fine;
   clearWanted(state);
-  const sh = ctx.city.pois.safehouse;
+  const house = ctx.city.pois.safehouse;
   exitPlayerVehicle(state);
   const p = state.player;
-  p.x = sh.x; p.z = sh.z; p.y = 0; p.vy = 0; p.grounded = true;
+  p.x = house.x; p.z = house.z; p.y = 0; p.vy = 0; p.grounded = true;
   p.heading = Math.PI;
   state.health = 100;
   state.events.emit('healthChanged', { health: state.health });
@@ -82,7 +83,7 @@ function doWasted(state, ctx) {
   if (ctx.showToast) ctx.showToast(`Pingsan! Denda $${fine}.`);
 }
 
-// Max +1 star per incident. The same incident key within 1 s adds nothing.
+// Max +1 star per incident: the same incident key within 1 s adds nothing.
 export function addWanted(state, amount, cause) {
   const w = state.wanted;
   if (!w || w.stars >= 5) return false;
@@ -98,12 +99,14 @@ export function addWanted(state, amount, cause) {
   return true;
 }
 
+// Module handles set by init; the handlers below need city + toast.
 let cityRef = null;
 let ctxRef = null;
 let alleyT = 0;
 
+// Profile swap: entering a stolen car while unseen shortens the escape
+// (police track the old car's plate, not the player).
 function onVehicleEntered(state) {
-  // Profile swap: entering a stolen car while unseen shortens the escape.
   const w = state.wanted;
   if (!w || w.stars <= 0 || w.seenByPolice) return;
   const p = state.player;
@@ -128,8 +131,7 @@ function onWitnessReported(state, data) {
 }
 
 function onCrimeSeen(state, data) {
-  // Police who see the crime directly raise wanted instantly. If no unit
-  // has line of sight, leave it to the witness chain — do not raise here.
+  // Police who see the crime directly raise wanted instantly; otherwise leave it to witnesses.
   if (!cityRef || !state.police) return;
   const p = state.player;
   for (const u of state.police) {
@@ -167,12 +169,12 @@ export function update(state, input, dt, ctx) {
   const seen = !!w.seenByPolice;
   const city = ctx.city;
 
-  // --- BUSTED: capture meter filled ---------------------------------------
+  // --- BUSTED: the capture meter filled while a unit held the player -----
   if (w.stars > 0 && w.captureT >= 3) {
     doBusted(state, ctx);
     return;
   }
-  // Capture meter bleeds off when no police unit is holding the player.
+  // The capture meter bleeds off when no police unit is holding the player.
   if (w.captureT > 0) {
     let held = false;
     if (p.onFoot) {
@@ -189,8 +191,7 @@ export function update(state, input, dt, ctx) {
     return;
   }
 
-  // --- search circle (3+ stars): centred on the player while seen, ------
-  // frozen while unseen so the player can actually leave it.
+  // --- search circle (3+ stars): follows the player while seen, frozen while unseen ---
   if (w.stars >= 3) {
     if (seen || !w.searchCircle) {
       w.searchCircle = { x: p.x, z: p.z, r: 60 + w.stars * 10 };
@@ -212,8 +213,7 @@ export function update(state, input, dt, ctx) {
       if (d > w.searchCircle.r) rate = 2; // outside the search area: 2x faster
     }
     w.hideT += dt * rate;
-    // Alley stop: standing still next to a building, unseen, for 2 s
-    // doubles the progress on top of the base rate.
+    // Alley stop: still next to a building, unseen, for 2 s doubles progress.
     const speed = Math.abs(p.speed || 0);
     if (speed < 0.5 && distToBuildings(city, p.x, p.z) < 8) {
       alleyT += dt;

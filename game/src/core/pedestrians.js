@@ -33,7 +33,7 @@ function roadDist(x, z) {
 }
 
 // A route that always has at least two nodes.
-function planRoute(city, fromId) {
+function makeRoute(city, fromId) {
   for (let i = 0; i < 4; i++) {
     const route = city.randomRoute(rng, fromId);
     if (route && route.length >= 2) return route;
@@ -58,7 +58,7 @@ function legTarget(ped, city) {
   return { x: c.x, z: c.z };
 }
 
-function spawnPed(state, city) {
+function addPed(state, city) {
   const p = state.player;
   let nodeId = -1, x = p.x, z = p.z;
   for (let i = 0; i < 24; i++) {
@@ -69,7 +69,7 @@ function spawnPed(state, city) {
     if (Math.hypot(c.x - p.x, c.z - p.z) <= SPAWN_FAR) { nodeId = id; break; }
   }
   if (nodeId < 0) nodeId = nearestNodeId(p.x + SPAWN_NEAR, p.z);
-  const route = planRoute(city, nodeId);
+  const route = makeRoute(city, nodeId);
   const side = rng.sign();
   const offset = rng.range(6, 10);
   const c0 = nodeCoords(nodeId);
@@ -166,7 +166,7 @@ export function init(ctx) {
     state.events.on('crimeSeen', (data) => onCrimeSeen(state, city, data));
     state.events.on('punch', () => onPunch(state));
   }
-  for (let i = 0; i < TARGET_PEDS; i++) spawnPed(state, city);
+  for (let i = 0; i < TARGET_PEDS; i++) addPed(state, city);
 }
 
 export function update(state, input, dt, ctx) {
@@ -178,7 +178,7 @@ export function update(state, input, dt, ctx) {
   spawnT += dt;
   if (state.peds.length < TARGET_PEDS && spawnT > 0.5) {
     spawnT = 0;
-    spawnPed(state, city);
+    addPed(state, city);
   }
   for (let i = state.peds.length - 1; i >= 0; i--) {
     const ped = state.peds[i];
@@ -199,7 +199,7 @@ export function update(state, input, dt, ctx) {
         ped.reportT = 0;
         state.events.emit('witnessReported', { x: ped.reportX, z: ped.reportZ });
         ped.state = 'walk';
-        ped.route = planRoute(city, nearestNodeId(ped.x, ped.z));
+        ped.route = makeRoute(city, nearestNodeId(ped.x, ped.z));
         ped.nodeIdx = 1;
         ped.target = legTarget(ped, city);
         ped.legT = 0;
@@ -218,7 +218,7 @@ export function update(state, input, dt, ctx) {
       if (ped.panicT <= 0) {
         ped.state = 'walk';
         ped.speed = 0;
-        ped.route = planRoute(city, nearestNodeId(ped.x, ped.z));
+        ped.route = makeRoute(city, nearestNodeId(ped.x, ped.z));
         ped.nodeIdx = 1;
         ped.target = legTarget(ped, city);
         ped.legT = 0;
@@ -235,7 +235,7 @@ export function update(state, input, dt, ctx) {
       if (ped.stopT <= 0) {
         ped.state = 'walk';
         if (ped.nodeIdx >= ped.route.length) {
-          ped.route = planRoute(city, nearestNodeId(ped.x, ped.z));
+          ped.route = makeRoute(city, nearestNodeId(ped.x, ped.z));
           ped.nodeIdx = 1;
         }
         ped.target = legTarget(ped, city);
@@ -304,7 +304,7 @@ export function update(state, input, dt, ctx) {
           ped.lookDir = rng.sign();
           continue;
         }
-        ped.route = planRoute(city, nearestNodeId(ped.x, ped.z));
+        ped.route = makeRoute(city, nearestNodeId(ped.x, ped.z));
         ped.nodeIdx = 1;
       } else if (rng.chance(0.08)) {
         ped.state = 'stop';

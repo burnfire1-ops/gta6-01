@@ -38,7 +38,7 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function dist2(ax, az, bx, bz) { const dx = ax - bx, dz = az - bz; return dx * dx + dz * dz; }
 
 // A route that always has at least two nodes (so there is a leg to drive).
-function planRoute(city, fromId) {
+function makeRoute(city, fromId) {
   for (let i = 0; i < 4; i++) {
     const route = city.randomRoute(rng, fromId);
     if (route && route.length >= 2) return route;
@@ -48,7 +48,7 @@ function planRoute(city, fromId) {
   return [fromId];
 }
 
-function pickSpawnNode(state) {
+function chooseSpawnNode(state) {
   const p = state.player;
   for (let i = 0; i < 24; i++) {
     const a = rng.range(0, Math.PI * 2);
@@ -61,10 +61,10 @@ function pickSpawnNode(state) {
   return nearestNodeId(p.x + SPAWN_NEAR, p.z);
 }
 
-function spawnTrafficCar(state, city) {
-  const nodeId = pickSpawnNode(state);
+function addTrafficCar(state, city) {
+  const nodeId = chooseSpawnNode(state);
   const c = nodeCoords(nodeId);
-  const route = planRoute(city, nodeId);
+  const route = makeRoute(city, nodeId);
   if (route.length < 2) return null;
   const type = rng.pick(TYPES);
   const spec = VEHICLE_TYPES[type];
@@ -100,7 +100,7 @@ function spawnTrafficCar(state, city) {
   return t;
 }
 
-function removeTrafficCar(state, t) {
+function dropTrafficCar(state, t) {
   const i = state.traffic.indexOf(t);
   if (i >= 0) state.traffic.splice(i, 1);
   const vi = state.vehicles.findIndex((v) => v.id === t.vehicleId);
@@ -109,7 +109,7 @@ function removeTrafficCar(state, t) {
 
 function replan(t, state, city, vehicle) {
   const fromId = nearestNodeId(vehicle.x, vehicle.z);
-  t.route = planRoute(city, fromId);
+  t.route = makeRoute(city, fromId);
   t.nodeIdx = 1;
   t.stuckT = 0;
   t.checkX = vehicle.x;
@@ -126,7 +126,7 @@ export function init(ctx) {
   for (const light of city.trafficLights) lightByNode.set(light.nodeId, light);
   const density = trafficDensity(state.clock, districtAt(state.player.x, state.player.z));
   const target = Math.round(BASE_TARGET * density);
-  for (let i = 0; i < target; i++) spawnTrafficCar(state, city);
+  for (let i = 0; i < target; i++) addTrafficCar(state, city);
 }
 
 export function update(state, input, dt, ctx) {
@@ -140,18 +140,18 @@ export function update(state, input, dt, ctx) {
   spawnT += dt;
   if (state.traffic.length < target && spawnT > 0.4) {
     spawnT = 0;
-    spawnTrafficCar(state, city);
+    addTrafficCar(state, city);
   }
   for (let i = state.traffic.length - 1; i >= 0; i--) {
     const t = state.traffic[i];
     const v = state.vehicles.find((x) => x.id === t.vehicleId);
-    if (!v || v.health <= 0) { removeTrafficCar(state, t); continue; }
+    if (!v || v.health <= 0) { dropTrafficCar(state, t); continue; }
     if (v.driver !== 'npc') { // player stole it (or police took it): release
       state.traffic.splice(i, 1);
       continue;
     }
     if (dist2(v.x, v.z, p.x, p.z) > DESPAWN_FAR * DESPAWN_FAR) {
-      removeTrafficCar(state, t);
+      dropTrafficCar(state, t);
     }
   }
 

@@ -18,12 +18,16 @@ export function createInput() {
     locked: false, dragging: false,
     actions: { moveX: 0, moveY: 0, run: false, jump: false, interact: false, attack: false, aim: false, reload: false, map: false, pause: false, handbrake: false },
   };
+
+  // Remember a discrete press; consumed once by pressed() inside its window.
   input.press = function press(action) { input.buffers[action] = performance.now(); };
+
   input.pressed = function pressed(action, windowMs = 220) {
     const t = input.buffers[action];
     if (t && performance.now() - t < windowMs) { delete input.buffers[action]; return true; }
     return false;
   };
+
   input.attach = function attach(canvas) {
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') e.preventDefault();
@@ -59,6 +63,7 @@ export function createInput() {
       input.locked = document.pointerLockElement === canvas;
     });
   };
+
   input.update = function update(settings) {
     const k = input.keys, b = input.binds;
     const sens = 0.0028 * (settings?.sensitivity ?? 1);
@@ -83,5 +88,6 @@ export function createInput() {
     a.map = input.pressed('map');
     a.pause = input.pressed('pause');
   };
+
   return input;
 }

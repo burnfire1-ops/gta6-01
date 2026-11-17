@@ -1,7 +1,8 @@
 // Teluk Cahaya — pedestrian meshes (render view of core/pedestrians.js).
 // One shared person rig per ped (makePerson/syncPerson from the shared
-// characters rig); a yellow "!" octahedron bobs above a ped that is
-// reporting a crime, so the player can read the witness fairly.
+// characters rig), coloured from fixed palettes by ped id. A yellow "!"
+// octahedron bobs above a ped that is reporting a crime, so the player can
+// read the witness fairly.
 import * as THREE from 'three';
 import { makePerson, syncPerson } from './characters-render.js';
 
@@ -54,7 +55,7 @@ export function sync(state, dt) {
     }
     // Walk speed drives the rig's phase (panic speed 7 = visibly faster).
     syncPerson(entry.group, ped.x, 0, ped.z, ped.heading, ped.speed, dt);
-    // Reporting witness: yellow "!" bobbing above the head.
+    // Reporting witness: yellow "!" bobbing and spinning above the head.
     const reporting = ped.reportT > 0;
     entry.mark.visible = reporting;
     if (reporting) {
@@ -62,7 +63,7 @@ export function sync(state, dt) {
       entry.mark.rotation.y += dt * 2;
     }
   }
-  // Remove meshes for peds that despawned.
+  // Drop meshes for peds that despawned.
   for (const [id, entry] of meshes) {
     if (!seen.has(id)) {
       scene.remove(entry.group);

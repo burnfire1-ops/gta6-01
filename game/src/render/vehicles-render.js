@@ -1,17 +1,16 @@
 // Teluk Cahaya — vehicle meshes (render view of core/vehicles.js).
-// Parametric rig per car: body + cabin + 4 wheels + lights; police get a
-// two-tone livery + blinking lightbar, taxis a roof sign. Shared geometries
-// and shared glass/tyre/light materials keep draw calls and GPU memory low
-// (threejs-geometry / threejs-performance: one geometry instance reused by
-// every mesh that references it). Per-vehicle state (position, heading,
-// wheel spin, damage dent) is copied from state.vehicles each frame.
+// Parametric rig per car: body + cabin + 4 wheels + lights. Police get a
+// two-tone livery and a blinking lightbar, taxis a roof sign. Geometries and
+// colour-independent materials are shared across every vehicle to keep draw
+// calls and GPU memory low. Per-vehicle state (position, heading, wheel spin,
+// damage dent) is copied from state.vehicles each frame.
 import * as THREE from 'three';
 
 let scene = null;
 
-// Shared geometry: built once, reused by every vehicle.
+// Shared geometry: built once, reused by every vehicle rig.
 const GEO = {};
-// Shared materials (colour-independent parts).
+// Shared materials for colour-independent parts.
 const MAT = {};
 
 function buildShared() {
@@ -39,9 +38,9 @@ function bodyMaterial(color) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.25, flatShading: true });
 }
 
-// Build one vehicle rig. Returns the root group; per-vehicle handles live in
-// group.userData (bodyGroup for roll/pitch, hood for the damage dent, wheels
-// for steer + spin, bodyMat for disposal).
+// Build one vehicle rig and return its root group. Per-vehicle handles live
+// in group.userData: bodyGroup for roll/pitch, hood for the damage dent,
+// wheels for steer + spin, bodyMat for disposal.
 export function createVehicleMesh(vehicle) {
   const g = new THREE.Group();
   const bodyMat = bodyMaterial(vehicle.color);
@@ -58,12 +57,12 @@ export function createVehicleMesh(vehicle) {
   cabin.castShadow = true;
   bodyGroup.add(cabin);
 
-  // Hood: separate mesh so a hard-hit car shows a dented bonnet.
+  // Hood: its own mesh so a hard-hit car can show a dented bonnet.
   const hood = new THREE.Mesh(GEO.hood, bodyMat);
   hood.position.set(0, 0.96, 1.45);
   bodyGroup.add(hood);
 
-  // Headlights (front = local +z) and taillights (rear = local -z).
+  // Headlights at the front (local +z), taillights at the rear (local -z).
   for (const sx of [-0.62, 0.62]) {
     const hl = new THREE.Mesh(GEO.headlight, MAT.head);
     hl.position.set(sx, 0.62, 2.11);
@@ -85,7 +84,7 @@ export function createVehicleMesh(vehicle) {
       panel.position.set(0, 0.96, pz);
       bodyGroup.add(panel);
     }
-    // Lightbar: red left, blue right; blink alternates in sync().
+    // Lightbar: red left, blue right; the blink alternates in sync().
     const barR = new THREE.Mesh(GEO.bar, MAT.barRed);
     barR.position.set(-0.35, 1.52, -0.25);
     const barB = new THREE.Mesh(GEO.bar, MAT.barBlue);
@@ -130,7 +129,8 @@ export function sync(state, dt) {
   if (!scene) return;
   const alive = new Set();
   const t = state.time || 0;
-  // Police lightbar: red/blue alternate ~4 Hz, shared materials blink in sync.
+  // Police lightbar: red/blue alternate ~4 Hz; the shared materials blink
+  // in sync for every patrol car.
   const phase = Math.floor(t * 4) % 2 === 0;
   MAT.barRed.emissiveIntensity = phase ? 2.6 : 0.15;
   MAT.barBlue.emissiveIntensity = phase ? 0.15 : 2.6;
@@ -154,7 +154,7 @@ export function sync(state, dt) {
       w.spin.rotation.x = g.userData.spinAngle;
     }
 
-    // Body roll into corners + a touch of pitch from acceleration.
+    // Body roll into corners plus a touch of pitch from acceleration.
     const speedF = Math.min(1, Math.abs(v.speed) / 15);
     const accel = dt > 0 ? (v.speed - g.userData.prevSpeed) / dt : 0;
     g.userData.prevSpeed = v.speed;
@@ -162,14 +162,14 @@ export function sync(state, dt) {
     g.userData.bodyGroup.rotation.z = -v.steer * speedF * 0.05;
     g.userData.bodyGroup.rotation.x = g.userData.pitchSmooth * 0.03;
 
-    // Damage: dented hood once health drops below 40.
+    // Damage: the hood dents once health drops below 40.
     const dent = v.health < 40 ? (1 - v.health / 40) : 0;
     g.userData.hood.scale.y = 1 - dent * 0.5;
     g.userData.hood.rotation.x = dent * 0.22;
     g.visible = true;
   }
 
-  // Remove rigs for vehicles that no longer exist.
+  // Drop rigs for vehicles that no longer exist.
   for (const [id, g] of rigs) {
     if (alive.has(id)) continue;
     rigs.delete(id);

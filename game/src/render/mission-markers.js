@@ -1,9 +1,9 @@
 // Teluk Cahaya — mission markers (render view of core/missions.js).
-// Reads only plain sim state each frame and copies it onto meshes:
-// a tall pulsing yellow beacon (transparent cylinder + ground ring +
-// floating diamond) at state.mission.marker, and a yellow "!" marker
-// over the mission giver while no mission is active. three.js lives
-// ONLY in this file; the sim never imports it.
+// Reads only plain sim state each frame and copies it onto meshes: a tall
+// pulsing yellow beacon (transparent cylinder + ground ring + floating
+// diamond) at state.mission.marker, and a purple-ringed yellow "!" over the
+// mission giver while no mission is active. three.js lives ONLY in this
+// file; the sim never imports it.
 import * as THREE from 'three';
 
 const BEACON_YELLOW = 0xf2c14e;
@@ -64,8 +64,7 @@ function makeBangTexture() {
   g.textBaseline = 'middle';
   g.strokeText('!', 64, 68);
   g.fillText('!', 64, 68);
-  const tex = new THREE.CanvasTexture(c);
-  return tex;
+  return new THREE.CanvasTexture(c);
 }
 
 function makeGiverMark() {
@@ -112,6 +111,7 @@ export function sync(state, dt) {
   if (marker) {
     const key = marker.x + ',' + marker.z;
     if (!beacon.visible || key !== lastMarkerKey) {
+      // New or teleported marker: snap straight to it.
       beacon.position.set(marker.x, 0, marker.z);
       lastMarkerKey = key;
     } else {

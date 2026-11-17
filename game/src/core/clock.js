@@ -7,7 +7,7 @@ export function hourOf(clock) { return (6 + clock * 24) % 24; }
 export function isNight(clock) { const h = hourOf(clock); return h >= 18 || h < 6; }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
-function lerpColor(c1, c2, t) {
+function mixColor(c1, c2, t) {
   return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
 }
 
@@ -28,7 +28,7 @@ export function skyColors(clock) {
   const [c0, top0, hor0] = SKY_KEYS[i];
   const [c1, top1, hor1] = SKY_KEYS[i + 1];
   const t = Math.min(1, Math.max(0, (clock - c0) / (c1 - c0)));
-  return { top: lerpColor(top0, top1, t), horizon: lerpColor(hor0, hor1, t) };
+  return { top: mixColor(top0, top1, t), horizon: mixColor(hor0, hor1, t) };
 }
 
 // Sun position (unit-ish direction) and intensity. Day: t in [0, 0.5].

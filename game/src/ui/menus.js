@@ -362,9 +362,14 @@ export function init(ctx) {
     ctx.state.events.on('saveDone', refreshContinueButton);
   }
 
+  // FIX 1 guard: main.js wires the core buttons synchronously at boot (so the
+  // title screen works before the slice loader finishes). Skip any button
+  // already wired there, so no handler ever fires twice.
   const on = (id, fn) => {
     const el = $(id);
-    if (el) el.addEventListener('click', fn);
+    if (!el || el.dataset.menuWired) return;
+    el.dataset.menuWired = '1';
+    el.addEventListener('click', fn);
   };
   on('btn-new', () => {
     try { ctx.state.events.emit('newGame', {}); } catch (e) { /* ignore */ }

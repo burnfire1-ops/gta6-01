@@ -1,4 +1,5 @@
-// Seeded RNG (mulberry32) + helpers. Pure, no dependencies. Same seed -> same city.
+// Seeded RNG (mulberry32) + helpers. Pure, no dependencies.
+// Same seed -> same sequence, so the city is reproducible.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function next() {
@@ -8,7 +9,6 @@ export function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
 export function makeRng(seed) {
   const next = mulberry32(seed);
   return {

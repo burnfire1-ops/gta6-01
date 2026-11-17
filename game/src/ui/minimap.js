@@ -1,7 +1,7 @@
 // ui/minimap.js — canvas minimap drawn from the REAL road graph (core/city.js).
-// North is always up (-z maps to screen up). Drawn on every 'frame' event;
-// the draw itself is cheap (a few hundred line segments) and reads only
-// plain sim state, never the 3D scene.
+// North is always up (-z maps to screen up). Redrawn on every 'frame'
+// event; the draw itself is cheap (a few hundred line segments) and reads
+// only plain sim state, never the 3D scene.
 const SIZE = 180;
 const MARGIN = 6;
 const SPAN = 480; // city spans -240..240 on x and z
@@ -11,6 +11,7 @@ let ctxRef = null;
 let canvas = null;
 let g = null;
 
+// World -> minimap screen coordinates.
 function toX(x) { return MARGIN + (x + 240) * SCALE; }
 function toY(z) { return MARGIN + (z + 240) * SCALE; }
 
@@ -47,6 +48,97 @@ function diamond(x, y, r, fill, stroke) {
   if (stroke) { g.strokeStyle = stroke; g.lineWidth = 1.5; g.stroke(); }
 }
 
+function square(x, y, half, fill) {
+  g.fillStyle = fill;
+  g.fillRect(x - half, y - half, half * 2, half * 2);
+}
+
+function drawRoads(city) {
+  // Every edge of the real graph, drawn once (only to > id).
+  g.strokeStyle = 'rgba(242,237,228,0.55)';
+  g.lineWidth = 2;
+  g.beginPath();
+  for (const n of city.nodes || []) {
+    const list = city.edges ? city.edges.get(n.id) : null;
+    if (!list) continue;
+    for (const e of list) {
+      if (e.to <= n.id) continue;
+      const t = city.nodes[e.to];
+      if (!t) continue;
+      g.moveTo(toX(n.x), toY(n.z));
+      g.lineTo(toX(t.x), toY(t.z));
+    }
+  }
+  g.stroke();
+}
+
+function drawPois(city) {
+  const pois = city.pois || {};
+  if (pois.safehouse) dot(toX(pois.safehouse.x), toY(pois.safehouse.z), 3.5, '#58c98a', '#0e1a33');
+  if (pois.garage) square(toX(pois.garage.x), toY(pois.garage.z), 3, '#f2c14e');
+  if (pois.missionGiver) diamond(toX(pois.missionGiver.x), toY(pois.missionGiver.z), 4, '#c98ae0', '#0e1a33');
+  if (pois.policeStation) square(toX(pois.policeStation.x), toY(pois.policeStation.z), 3, '#5fb8d8');
+  if (pois.portWarehouse) dot(toX(pois.portWarehouse.x), toY(pois.portWarehouse.z), 3, '#b8a890', '#0e1a33');
+  if (pois.paintShop) dot(toX(pois.paintShop.x), toY(pois.paintShop.z), 3, '#f28a5f', '#0e1a33');
+}
+
+function drawPackages(city, p) {
+  // Hidden packages, only near the player (within 120 units) and unfound.
+  for (const pkg of city.packages || []) {
+    if (pkg.found) continue;
+    if (Math.hypot(pkg.x - p.x, pkg.z - p.z) > 120) continue;
+    dot(toX(pkg.x), toY(pkg.z), 2, '#e8f7ff', '#0e1a33');
+  }
+}
+
+function drawSearchCircle(wanted) {
+  // Wanted search circle: amber while hunted, green while hidden.
+  const sc = wanted.searchCircle;
+  if (!sc || !Number.isFinite(sc.r) || sc.r <= 0) return;
+  g.beginPath();
+  g.arc(toX(sc.x), toY(sc.z), Math.max(2, sc.r * SCALE), 0, Math.PI * 2);
+  g.strokeStyle = wanted.hideT > 0 ? 'rgba(88,201,138,0.9)' : 'rgba(242,193,78,0.85)';
+  g.lineWidth = 1.5;
+  g.stroke();
+}
+
+function drawPolice(state, wanted) {
+  // Police dots, only while wanted.
+  if (wanted.stars <= 0) return;
+  for (const cop of state.police || []) {
+    let pos = null;
+    if (Number.isFinite(cop.x) && Number.isFinite(cop.z)) pos = cop;
+    else if (cop.vehicleId !== null && cop.vehicleId !== undefined) {
+      pos = (state.vehicles || []).find((v) => v.id === cop.vehicleId) || null;
+    }
+    if (!pos && cop.lastKnown) pos = cop.lastKnown;
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.z)) {
+      dot(toX(pos.x), toY(pos.z), 2.5, '#3f8cff', '#0e1a33');
+    }
+  }
+}
+
+function drawPlayer(p) {
+  // Player arrow, rotated to heading. World dir (sin h, cos h) in (x, z)
+  // maps to screen (sin h, cos h); rotating the up-pointing triangle by
+  // (PI - h) points it along that screen direction.
+  g.save();
+  g.translate(toX(p.x), toY(p.z));
+  g.rotate(Math.PI - (p.heading || 0));
+  g.beginPath();
+  g.moveTo(0, -7);
+  g.lineTo(5, 6);
+  g.lineTo(0, 3);
+  g.lineTo(-5, 6);
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  g.strokeStyle = '#0e1a33';
+  g.lineWidth = 1.5;
+  g.stroke();
+  g.restore();
+}
+
 function draw() {
   const { state, city } = ctxRef;
   if (!state || !city || !g) return;
@@ -75,92 +167,17 @@ function draw() {
     g.fillRect(toX(b.cx - 20), toY(b.cz - 20), 40 * SCALE, 40 * SCALE);
   }
 
-  // Roads: every edge of the real graph, drawn once (to > id).
-  g.strokeStyle = 'rgba(242,237,228,0.55)';
-  g.lineWidth = 2;
-  g.beginPath();
-  for (const n of city.nodes || []) {
-    const list = city.edges ? city.edges.get(n.id) : null;
-    if (!list) continue;
-    for (const e of list) {
-      if (e.to <= n.id) continue;
-      const t = city.nodes[e.to];
-      if (!t) continue;
-      g.moveTo(toX(n.x), toY(n.z));
-      g.lineTo(toX(t.x), toY(t.z));
-    }
-  }
-  g.stroke();
-
-  // Points of interest.
-  const pois = city.pois || {};
-  if (pois.safehouse) dot(toX(pois.safehouse.x), toY(pois.safehouse.z), 3.5, '#58c98a', '#0e1a33');
-  if (pois.garage) {
-    g.fillStyle = '#f2c14e';
-    g.fillRect(toX(pois.garage.x) - 3, toY(pois.garage.z) - 3, 6, 6);
-  }
-  if (pois.missionGiver) diamond(toX(pois.missionGiver.x), toY(pois.missionGiver.z), 4, '#c98ae0', '#0e1a33');
-  if (pois.policeStation) {
-    g.fillStyle = '#5fb8d8';
-    g.fillRect(toX(pois.policeStation.x) - 3, toY(pois.policeStation.z) - 3, 6, 6);
-  }
-  if (pois.portWarehouse) dot(toX(pois.portWarehouse.x), toY(pois.portWarehouse.z), 3, '#b8a890', '#0e1a33');
-  if (pois.paintShop) dot(toX(pois.paintShop.x), toY(pois.paintShop.z), 3, '#f28a5f', '#0e1a33');
-
-  // Hidden packages, only near the player (within 120 units) and unfound.
-  for (const pkg of city.packages || []) {
-    if (pkg.found) continue;
-    if (Math.hypot(pkg.x - p.x, pkg.z - p.z) > 120) continue;
-    dot(toX(pkg.x), toY(pkg.z), 2, '#e8f7ff', '#0e1a33');
-  }
-
-  // Wanted search circle: amber while hunted, green while hidden.
-  const sc = wanted.searchCircle;
-  if (sc && Number.isFinite(sc.r) && sc.r > 0) {
-    g.beginPath();
-    g.arc(toX(sc.x), toY(sc.z), Math.max(2, sc.r * SCALE), 0, Math.PI * 2);
-    g.strokeStyle = wanted.hideT > 0 ? 'rgba(88,201,138,0.9)' : 'rgba(242,193,78,0.85)';
-    g.lineWidth = 1.5;
-    g.stroke();
-  }
+  drawRoads(city);
+  drawPois(city);
+  drawPackages(city, p);
+  drawSearchCircle(wanted);
 
   // Mission objective marker.
   const marker = missionMarker(state);
   if (marker) diamond(toX(marker.x), toY(marker.z), 5.5, '#f2c14e', '#0e1a33');
 
-  // Police dots, only while wanted.
-  if (wanted.stars > 0) {
-    for (const cop of state.police || []) {
-      let pos = null;
-      if (Number.isFinite(cop.x) && Number.isFinite(cop.z)) pos = cop;
-      else if (cop.vehicleId !== null && cop.vehicleId !== undefined) {
-        pos = (state.vehicles || []).find((v) => v.id === cop.vehicleId) || null;
-      }
-      if (!pos && cop.lastKnown) pos = cop.lastKnown;
-      if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.z)) {
-        dot(toX(pos.x), toY(pos.z), 2.5, '#3f8cff', '#0e1a33');
-      }
-    }
-  }
-
-  // Player arrow, rotated to heading. World dir (sin h, cos h) in (x, z)
-  // maps to screen (sin h, cos h); rotating the up-pointing triangle by
-  // (PI - h) points it along that screen direction.
-  g.save();
-  g.translate(toX(p.x), toY(p.z));
-  g.rotate(Math.PI - (p.heading || 0));
-  g.beginPath();
-  g.moveTo(0, -7);
-  g.lineTo(5, 6);
-  g.lineTo(0, 3);
-  g.lineTo(-5, 6);
-  g.closePath();
-  g.fillStyle = '#ffffff';
-  g.fill();
-  g.strokeStyle = '#0e1a33';
-  g.lineWidth = 1.5;
-  g.stroke();
-  g.restore();
+  drawPolice(state, wanted);
+  drawPlayer(p);
 }
 
 export function init(ctx) {

@@ -23,3 +23,5 @@ You are Raka, a freelance courier in Teluk Cahaya, a fictional tropical coastal 
 ## Build
 
 `main.ts` (Node 22) hands the game in: it copies `game/` and `screenshots/` to `/output` and writes `/output/dossier.json`.
+
+Rebuild notes: the title-screen buttons (New Game, Continue, Resume, Quit) are wired synchronously at boot in `game/src/main.js`, so the menu responds even before the gameplay slices finish loading. The night screenshot is framed down the z=-200 neon avenue, facing away from the 64-unit glass tower, so the car and the street read clearly at night.

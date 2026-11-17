@@ -1,20 +1,22 @@
-// City rendering: instanced buildings, palms, lamps, roads from a canvas
-// texture, water, seawall and lighthouse. All assets procedural from the
-// same seed as the sim city. Meshes are views of core/city.js data.
+// City rendering: instanced buildings, palms, lamps, a canvas-textured road
+// ground, sea, seawall and lighthouse. All procedural, from the same seed as
+// the simulation city in core/city.js — the meshes are views of that data.
 import * as THREE from 'three';
 import { makeRng } from '../core/rng.js';
 import { nightFactor } from '../core/clock.js';
 import { HALF, SPACING } from '../core/city.js';
 
+// Facade maps for the instanced building boxes. Day map: pale plaster with a
+// cornice and a grid of windows; emissive map: only the lit windows glow, so
+// at night the buildings light up room by room.
 function facadeTextures(seed) {
-  // Day map: light base + dark windows; emissive map: only lit windows glow.
   const rng = makeRng(seed * 7 + 3);
   const day = document.createElement('canvas'); day.width = 128; day.height = 256;
   const emi = document.createElement('canvas'); emi.width = 128; emi.height = 256;
   const d = day.getContext('2d'), e = emi.getContext('2d');
   d.fillStyle = '#efe8da'; d.fillRect(0, 0, 128, 256);
   e.fillStyle = '#000000'; e.fillRect(0, 0, 128, 256);
-  d.fillStyle = '#e0d4c0'; d.fillRect(0, 0, 128, 10); // cornice
+  d.fillStyle = '#e0d4c0'; d.fillRect(0, 0, 128, 10); // cornice strip
   for (let row = 0; row < 11; row++) {
     for (let col = 0; col < 5; col++) {
       const x = 11 + col * 23, y = 18 + row * 21;
@@ -31,20 +33,20 @@ function facadeTextures(seed) {
   return { dayTex, emiTex };
 }
 
+// Ground texture: navy asphalt base, pale sidewalk blocks (inset 5 units, so
+// the 10-unit bands along the grid lines stay road), yellow centre dashes
+// along every grid line, and white crosswalks at major intersections.
 function groundTexture(city) {
-  const S = 1024, W = 560; // world -280..280 maps to 0..1024
+  const S = 1024, W = 560; // world -280..280 maps onto 0..1024 px
   const cv = document.createElement('canvas'); cv.width = S; cv.height = S;
   const g = cv.getContext('2d');
   const toPx = (v) => ((v + W / 2) / W) * S;
-  const px = S / W; // px per unit
-  g.fillStyle = '#2e3442'; g.fillRect(0, 0, S, S); // navy asphalt roads
-  // Sidewalk colour only inside each block (inset 5 units, matching the slabs);
-  // the 10-unit bands along grid lines stay asphalt road.
+  const px = S / W; // pixels per world unit
+  g.fillStyle = '#2e3442'; g.fillRect(0, 0, S, S); // asphalt
   g.fillStyle = '#c9b6a4';
   for (const b of city.blocks) {
     g.fillRect(toPx(b.cx - 15), toPx(b.cz - 15), 30 * px, 30 * px);
   }
-  // Road centre dashes (yellow) along every grid line.
   g.fillStyle = '#f2c14e';
   for (let v = -HALF; v <= HALF; v += SPACING) {
     for (let u = -HALF; u < HALF; u += 8) {
@@ -52,7 +54,6 @@ function groundTexture(city) {
       g.fillRect(toPx(v) - 0.4 * px, toPx(u), 0.8 * px, 4 * px);
     }
   }
-  // Crosswalks at major intersections.
   g.fillStyle = '#e8e8e8';
   for (let x = -HALF; x <= HALF; x += 80) {
     for (let z = -HALF; z <= HALF; z += 80) {
@@ -72,7 +73,7 @@ export function createCityRender(scene, city) {
   group.name = 'city';
   scene.add(group);
 
-  // Ground with procedural road texture.
+  // Ground plane with the procedural road texture.
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(560, 560),
     new THREE.MeshStandardMaterial({ map: groundTexture(city), roughness: 0.9, metalness: 0 }),
@@ -81,7 +82,7 @@ export function createCityRender(scene, city) {
   ground.receiveShadow = true;
   group.add(ground);
 
-  // Raised sidewalk slabs (one instanced mesh for all blocks).
+  // Raised sidewalk slabs, one instanced mesh for every block.
   const slabGeo = new THREE.BoxGeometry(30, 0.5, 30);
   const slabMat = new THREE.MeshStandardMaterial({ color: 0xd8c8b4, roughness: 0.95 });
   const slabs = new THREE.InstancedMesh(slabGeo, slabMat, city.blocks.length);
@@ -93,10 +94,11 @@ export function createCityRender(scene, city) {
   slabs.receiveShadow = true;
   group.add(slabs);
 
-  // Buildings: facade instanced mesh + glass instanced mesh.
+  // Buildings: one unit box scaled per building, split into facade and glass
+  // instanced meshes so the glass towers get a glossier material.
   const { dayTex, emiTex } = facadeTextures(city.seed);
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-  boxGeo.translate(0, 0.5, 0);
+  boxGeo.translate(0, 0.5, 0); // scale from the base, not the centre
   const facadeMat = new THREE.MeshStandardMaterial({
     map: dayTex, emissiveMap: emiTex, emissive: 0xffffff, emissiveIntensity: 0,
     roughness: 0.85, metalness: 0.05,
@@ -126,7 +128,7 @@ export function createCityRender(scene, city) {
   glassMesh.castShadow = true; glassMesh.receiveShadow = true;
   group.add(facadeMesh); group.add(glassMesh);
 
-  // Palms along the boulevard streets.
+  // Palms along the boulevard streets (the outer ring roads and a mid ring).
   const palmRng = makeRng(city.seed + 11);
   const palmSpots = [];
   for (let v = -HALF + 20; v <= HALF - 20; v += 40) {
@@ -150,7 +152,7 @@ export function createCityRender(scene, city) {
   trunks.castShadow = true;
   group.add(trunks); group.add(leaves);
 
-  // Street lamps at major intersections (emissive heads glow at night).
+  // Street lamps at the traffic-light intersections; the heads glow at night.
   const lampGeo = new THREE.CylinderGeometry(0.12, 0.18, 6, 5);
   lampGeo.translate(0, 3, 0);
   const lampMat = new THREE.MeshStandardMaterial({ color: 0x3a4048, roughness: 0.6, metalness: 0.4 });
@@ -172,7 +174,7 @@ export function createCityRender(scene, city) {
   });
   group.add(poles); group.add(heads);
 
-  // Sea + seawall + lighthouse.
+  // Sea plane, seawall ring and the lighthouse at its POI.
   const water = new THREE.Mesh(
     new THREE.PlaneGeometry(1800, 1800),
     new THREE.MeshStandardMaterial({ color: 0x2a8a9a, roughness: 0.25, metalness: 0.1 }),
@@ -204,6 +206,7 @@ export function createCityRender(scene, city) {
   lh.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   group.add(lh);
 
+  // Night pass: windows and lamp heads glow, the lighthouse lamp pulses.
   function sync(state) {
     const night = nightFactor(state.clock);
     facadeMat.emissiveIntensity = night * 0.9;

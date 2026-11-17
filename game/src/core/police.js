@@ -1,10 +1,9 @@
-// Teluk Cahaya — police slice (core sim, pure: no three.js).
-// Owns state.police: perception at 5 Hz (staggered), FSM
-// patrol / suspicious / chase / search / giveup, out-of-view spawns,
-// lead/intercept steering with fan-out, 1-star tail-only rule, capture
-// meter, anti-stuck repath + off-view relocate. Police top speed (28) is
-// below the player's sports car (32) — set in vehicles.js, not here.
-// Genre rules: open-world-crime skill §1-§3, game-ai layered AI.
+// Teluk Cahaya — police slice (core simulation, pure: no three.js).
+// Owns state.police: 5 Hz staggered perception, the FSM patrol / suspicious /
+// chase / search / giveup, out-of-view spawns, lead/intercept steering with
+// lateral fan-out, the 1-star tail-only rule, the capture meter, and
+// anti-stuck repath + off-view relocate. Police top speed (28) is below the
+// player's sports car (32) — that number lives in vehicles.js. Genre: open-world-crime §1-§3.
 
 import { makeRng } from './rng.js';
 import { nodeCoords, nearestNodeId } from './city.js';
@@ -32,30 +31,32 @@ function wrapAngle(a) {
   return a;
 }
 
+// Player velocity in world XZ, from the driven car or on foot.
 function playerVelocity(state) {
   const p = state.player;
   if (!p.onFoot && p.vehicleId !== null) {
-    const v = state.vehicles.find((x) => x.id === p.vehicleId);
-    if (v) return { x: Math.sin(v.heading) * v.speed, z: Math.cos(v.heading) * v.speed };
+    const car = state.vehicles.find((x) => x.id === p.vehicleId);
+    if (car) return { x: Math.sin(car.heading) * car.speed, z: Math.cos(car.heading) * car.speed };
   }
   return { x: p.vx || 0, z: p.vz || 0 };
 }
 
-// Cheap-to-expensive sight check: distance, then view cone, then one LOS ray.
+// Cheap-to-expensive sight check: squared distance, then view cone,
+// then a single line-of-sight ray. A wrecked car sees nothing.
 export function unitSeesPlayer(state, city, unit) {
-  const v = state.vehicles.find((x) => x.id === unit.vehicleId);
-  if (!v || v.health <= 0) return false;
+  const car = state.vehicles.find((x) => x.id === unit.vehicleId);
+  if (!car || car.health <= 0) return false;
   const p = state.player;
-  const dx = p.x - v.x, dz = p.z - v.z;
+  const dx = p.x - car.x, dz = p.z - car.z;
   const d2 = dx * dx + dz * dz;
   if (d2 > SIGHT_RANGE * SIGHT_RANGE) return false;
   const d = Math.sqrt(d2);
   if (d > CLOSE_RANGE) {
-    const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
+    const fx = Math.sin(car.heading), fz = Math.cos(car.heading);
     const dot = (dx * fx + dz * fz) / (d || 1);
     if (dot < Math.cos(SIGHT_HALF_ANGLE)) return false;
   }
-  return !city.segmentBlocked(v.x, v.z, p.x, p.z);
+  return !city.segmentBlocked(car.x, car.z, p.x, p.z);
 }
 
 function setState(unit, next) {
@@ -63,10 +64,11 @@ function setState(unit, next) {
   unit.stateT = 0;
 }
 
+// A* a fresh route from the unit's car to a road-graph node.
 function repath(unit, targetNodeId) {
-  const v = unit.vehicle;
-  if (!v) return;
-  const from = nearestNodeId(v.x, v.z);
+  const car = unit.vehicle;
+  if (!car) return;
+  const from = nearestNodeId(car.x, car.z);
   unit.route = cityRef.astar(from, targetNodeId);
   unit.nodeIdx = 0;
   unit.repathT = 0;
@@ -76,13 +78,13 @@ function randomNodeId() {
   return rng.int(0, 168);
 }
 
+// Spawn point 60-90 units out, out of the player's view (building-blocked,
+// or far + outside the ~50-degree camera cone) and outside the min radius.
+// Returns {x, z} or null after 12 tries.
 function pickSpawnPoint(state, ctx) {
-  // Random point 60-90 units from the player, out of the player's view
-  // (building-blocked, or far + outside the ~50-degree camera cone) and
-  // outside the minimum spawn radius. Returns {x, z} or null after 12 tries.
   const p = state.player;
   const cam = ctx && ctx.camera ? ctx.camera.position : null;
-  // The camera looks at the player: its forward is player minus camera pos.
+  // The camera looks at the player, so its forward is player minus camera.
   let camFx = 0, camFz = 0;
   if (cam) {
     const cl = Math.hypot(p.x - cam.x, p.z - cam.z) || 1;
@@ -163,18 +165,18 @@ function removeUnit(state, unit) {
   if (pi >= 0) state.police.splice(pi, 1);
 }
 
+// Second anti-stuck failure: move the unit to the nearest node out of view (or far away).
 function relocateOutOfView(state, unit) {
-  // Second anti-stuck failure: move to the nearest node out of view.
   const p = state.player;
-  const v = unit.vehicle;
+  const car = unit.vehicle;
   for (let i = 0; i < 16; i++) {
     const nid = randomNodeId();
     const c = nodeCoords(nid);
     const d = Math.hypot(c.x - p.x, c.z - p.z);
     if (d < MIN_SPAWN_DIST) continue;
     if (cityRef.segmentBlocked(p.x, p.z, c.x, c.z) || d > 80) {
-      v.x = c.x; v.z = c.z; v.speed = 0;
-      v.heading = Math.atan2(p.x - c.x, p.z - c.z);
+      car.x = c.x; car.z = c.z; car.speed = 0;
+      car.heading = Math.atan2(p.x - c.x, p.z - c.z);
       repath(unit, nearestNodeId(p.x, p.z));
       unit.stuckCount = 0;
       unit.stuckT = 0;
@@ -186,27 +188,27 @@ function relocateOutOfView(state, unit) {
   unit.stuckT = 0;
 }
 
-// Steering helper: control input for stepVehicle toward a target point.
-// Returns { throttle, steer, brake, handbrake }.
+// Steering helper: the control input for stepVehicle toward a target point.
 function steerTo(unit, tx, tz, cruise) {
-  const v = unit.vehicle;
-  const dx = tx - v.x, dz = tz - v.z;
+  const car = unit.vehicle;
+  const dx = tx - car.x, dz = tz - car.z;
   const want = Math.atan2(dx, dz);
-  const diff = wrapAngle(want - v.heading);
+  const diff = wrapAngle(want - car.heading);
   const steer = Math.max(-1, Math.min(1, diff * 1.6));
   let throttle = 1;
   if (Math.abs(diff) > 1.2) throttle = 0.4;      // hard turn: slow down
-  if (Math.abs(diff) > 2.5 && Math.abs(v.speed) < 2) throttle = -0.5; // reverse out
-  if (cruise !== undefined && Math.abs(v.speed) > cruise) throttle = 0;
+  if (Math.abs(diff) > 2.5 && Math.abs(car.speed) < 2) throttle = -0.5; // reverse out
+  if (cruise !== undefined && Math.abs(car.speed) > cruise) throttle = 0;
   return { throttle, steer, brake: false, handbrake: false };
 }
 
+// Follow the unit's cached A* route; returns a control input, or null when finished.
 function followRoute(state, unit, dt, cruise) {
-  const v = unit.vehicle;
+  const car = unit.vehicle;
   if (!unit.route || unit.nodeIdx >= unit.route.length) return null;
   const wp = nodeCoords(unit.route[unit.nodeIdx]);
-  const d = Math.hypot(wp.x - v.x, wp.z - v.z);
-  const reach = Math.max(4, Math.abs(v.speed) * dt + 2);
+  const d = Math.hypot(wp.x - car.x, wp.z - car.z);
+  const reach = Math.max(4, Math.abs(car.speed) * dt + 2);
   if (d < reach) {
     unit.nodeIdx++;
     if (unit.nodeIdx >= unit.route.length) return null;
@@ -237,8 +239,8 @@ export function update(state, input, dt, ctx) {
   // Extra units (stars fell) finish their giveup instead of vanishing.
   for (const u of state.police.slice()) {
     if (u.state === 'giveup' && stars === 0) {
-      const v = u.vehicle;
-      if (v && Math.hypot(v.x - p.x, v.z - p.z) > DESPAWN_DIST) removeUnit(state, u);
+      const car = u.vehicle;
+      if (car && Math.hypot(car.x - p.x, car.z - p.z) > DESPAWN_DIST) removeUnit(state, u);
     }
   }
 
@@ -263,8 +265,8 @@ export function update(state, input, dt, ctx) {
   // --- FSM + driving per unit ----------------------------------------------
   const count = state.police.length;
   for (const u of state.police.slice()) {
-    const v = u.vehicle;
-    if (!v || v.health <= 0) {
+    const car = u.vehicle;
+    if (!car || car.health <= 0) {
       // Wrecked unit: its car is done; the officer gives up.
       if (u.state !== 'giveup') setState(u, 'giveup');
     }
@@ -272,7 +274,7 @@ export function update(state, input, dt, ctx) {
     const seenNow = state.time - u.lastSeenAt < 0.5;
     if (seenNow) u.lostT = 0; else u.lostT += dt;
 
-    // Transitions (alert into chase is immediate; exits need MIN_STATE_T).
+    // Transitions: alerting into chase is immediate; exits need MIN_STATE_T.
     if (u.state === 'patrol') {
       if (stars > 0 || seenNow) { setState(u, 'chase'); u.lostT = 0; }
     } else if (u.state === 'suspicious') {
@@ -291,10 +293,10 @@ export function update(state, input, dt, ctx) {
     } else if (u.state === 'giveup') {
       if (stars > 0 && seenNow) setState(u, 'chase');
       else if (stars === 0 && u.stateT >= MIN_STATE_T && (!u.route || u.nodeIdx >= u.route.length)) {
-        // Drive away from the player; despawn check runs at the top.
-        const away = Math.atan2(v.x - p.x, v.z - p.z);
-        const tx = Math.max(-240, Math.min(240, v.x + Math.sin(away) * 120));
-        const tz = Math.max(-240, Math.min(240, v.z + Math.cos(away) * 120));
+        // Drive away from the player; the despawn check runs at the top.
+        const away = Math.atan2(car.x - p.x, car.z - p.z);
+        const tx = Math.max(-240, Math.min(240, car.x + Math.sin(away) * 120));
+        const tz = Math.max(-240, Math.min(240, car.z + Math.cos(away) * 120));
         repath(u, nearestNodeId(tx, tz));
         u.stateT = 0;
       }
@@ -302,8 +304,8 @@ export function update(state, input, dt, ctx) {
 
     // --- behaviour per state -------------------------------------------------
     let control = { throttle: 0, steer: 0, brake: true, handbrake: false };
-    if (!v || v.health <= 0) {
-      // No drivable car: stand still (giveup path above handles removal).
+    if (!car || car.health <= 0) {
+      // No drivable car: stand still (the giveup path above handles removal).
     } else if (u.state === 'patrol' || u.state === 'giveup') {
       u.repathT += dt;
       if (!u.route || u.nodeIdx >= u.route.length || u.repathT > 20) {
@@ -311,7 +313,7 @@ export function update(state, input, dt, ctx) {
       }
       control = followRoute(state, u, dt, 10) || { throttle: 0, steer: 0, brake: true, handbrake: false };
     } else if (u.state === 'suspicious') {
-      // Face the player, hold position.
+      // Face the player and hold position.
       control = steerTo(u, p.x, p.z, 0);
       control.throttle = 0; control.brake = true;
     } else if (u.state === 'chase') {
@@ -320,12 +322,12 @@ export function update(state, input, dt, ctx) {
       const vel = playerVelocity(state);
       const tx0 = seenNow ? p.x + vel.x * 0.6 : u.lastKnown.x;
       const tz0 = seenNow ? p.z + vel.z * 0.6 : u.lastKnown.z;
-      const dx = tx0 - v.x, dz = tz0 - v.z;
+      const dx = tx0 - car.x, dz = tz0 - car.z;
       const d = Math.hypot(dx, dz) || 1;
       const lat = (u.fanIndex - (count - 1) / 2) * 8;
       const tx = tx0 + (-dz / d) * lat;
       const tz = tz0 + (dx / d) * lat;
-      const distP = Math.hypot(p.x - v.x, p.z - v.z);
+      const distP = Math.hypot(p.x - car.x, p.z - car.z);
 
       if (stars === 1) {
         // Tail only: keep ~15 units, never ram.
@@ -338,8 +340,7 @@ export function update(state, input, dt, ctx) {
         // Ram the player's car directly at close range.
         control = steerTo(u, p.x, p.z);
       } else {
-        // Route on the road graph toward the target node; repath when the
-        // target node moves or every 1 s.
+        // Route on the road graph; repath when the target node moves or every 1 s.
         u.repathT += dt;
         const targetNode = nearestNodeId(tx, tz);
         const curTarget = u.chaseNode;
@@ -350,7 +351,7 @@ export function update(state, input, dt, ctx) {
         control = followRoute(state, u, dt) || steerTo(u, tx, tz);
       }
 
-      // Capture: on-foot player held within 6 units fills the meter.
+      // Capture: an on-foot player held within 6 units fills the meter.
       if (p.onFoot && distP < CAPTURE_RANGE) {
         w.captureT += dt;
       }
@@ -360,7 +361,7 @@ export function update(state, input, dt, ctx) {
         if (pv) damageVehicle(state, pv, 6 * dt);
       }
     } else if (u.state === 'search') {
-      const dKnown = Math.hypot(u.lastKnown.x - v.x, u.lastKnown.z - v.z);
+      const dKnown = Math.hypot(u.lastKnown.x - car.x, u.lastKnown.z - car.z);
       if (dKnown > 5) {
         u.repathT += dt;
         if (u.repathT > 1) repath(u, nearestNodeId(u.lastKnown.x, u.lastKnown.z));
@@ -369,17 +370,16 @@ export function update(state, input, dt, ctx) {
         // At lastKnown: look around (slow spin) for 6 s.
         u.searchT += dt;
         control = { throttle: 0, steer: 0.6, brake: false, handbrake: false };
-        v.heading += 0.6 * dt;
+        car.heading += 0.6 * dt;
       }
     }
 
-    if (v && v.health > 0) stepVehicle(state, v, control, dt, cityRef);
+    if (car && car.health > 0) stepVehicle(state, car, control, dt, cityRef);
 
-    // --- anti-stuck: <0.5 units in 2 s while trying to move -> repath -----
-    // once, then relocate to a node out of view.
+    // --- anti-stuck: <0.5 units in 2 s while trying to move -> repath once, then relocate ---
     u.stuckT += dt;
     if (u.stuckT >= 2) {
-      const moved = Math.hypot(v.x - u.lastPos.x, v.z - u.lastPos.z);
+      const moved = Math.hypot(car.x - u.lastPos.x, car.z - u.lastPos.z);
       if (moved < 0.5 && control.throttle !== 0) {
         u.stuckCount++;
         if (u.stuckCount === 1) {
@@ -391,7 +391,7 @@ export function update(state, input, dt, ctx) {
         u.stuckCount = 0;
       }
       u.stuckT = 0;
-      u.lastPos = { x: v.x, z: v.z };
+      u.lastPos = { x: car.x, z: car.z };
     }
   }
 }

@@ -1,9 +1,9 @@
 // Teluk Cahaya — audio slice (synthesized, Web Audio API only).
-// No audio files, no network, no licensed content. Everything below is
-// generated with oscillators and filtered noise at runtime.
+// No audio files, no network, no licensed content. Every sound below is
+// generated at runtime with oscillators and filtered noise.
 //
-// Buses (per audio-design skill: sliders are squared, ducking never touches
-// the player's Music slider — it rides a separate duck bus):
+// Buses (per audio-design skill: sliders are squared, and ducking never
+// touches the player's Music slider — it rides a separate duck bus):
 //   master -> destination
 //   music -> musicDuck -> master, sfx -> master, ambience -> master, ui -> master
 //

@@ -51,8 +51,8 @@ export function topSpeedFor(vehicle) {
   return top;
 }
 
-function damagePlayerFromImpact(state, impact) {
-  // Hard crashes hurt the driver, not just the car.
+function hurtDriverFromCrash(state, impact) {
+  // A hard crash hurts the driver, not just the car.
   if (impact <= 14 || state.health <= 0) return;
   state.health = Math.max(0, state.health - Math.round(impact - 14));
   state.events.emit('healthChanged', { health: state.health });
@@ -146,7 +146,7 @@ export function stepVehicle(state, vehicle, control, dt, city) {
     vehicle.speed *= 0.25; // bounce/slide: most speed is lost on the wall
     if (impact > 8) {
       damageVehicle(state, vehicle, (impact - 8) * 1.5);
-      if (vehicle.driver === 'player') damagePlayerFromImpact(state, impact);
+      if (vehicle.driver === 'player') hurtDriverFromCrash(state, impact);
     }
   } else {
     vehicle.x = Math.max(-BOUND, Math.min(BOUND, vehicle.x));
@@ -179,7 +179,7 @@ export function stepVehicle(state, vehicle, control, dt, city) {
 
 // --- enter / exit -----------------------------------------------------------
 
-function nearestVehicle(state, x, z, maxDist) {
+function closestVehicle(state, x, z, maxDist) {
   let best = null, bestD = maxDist;
   for (const v of state.vehicles) {
     if (v.health <= 0) continue;
@@ -189,7 +189,7 @@ function nearestVehicle(state, x, z, maxDist) {
   return best;
 }
 
-function exitVehicle(state, vehicle) {
+function leaveVehicle(state, vehicle) {
   const p = state.player;
   const sideX = Math.cos(vehicle.heading), sideZ = -Math.sin(vehicle.heading);
   p.x = vehicle.x + sideX * 2.4;
@@ -234,7 +234,7 @@ let holdT = 0;
 let holdTargetId = null;
 const HOLD_SECONDS = 1.5;
 
-function resetHold() {
+function clearHold() {
   holdT = 0;
   holdTargetId = null;
 }
@@ -291,12 +291,12 @@ export function init(ctx) {
     spawnVehicle(state, city, type, x, z, heading, { parked: true, locked, color });
     placed++;
   }
-  resetHold();
+  clearHold();
 }
 
 export function update(state, input, dt, ctx) {
   const p = state.player;
-  if (state.mode !== 'playing') { resetHold(); return; }
+  if (state.mode !== 'playing') { clearHold(); return; }
 
   // --- driving ---------------------------------------------------------------
   if (!p.onFoot && p.vehicleId !== null) {
@@ -324,23 +324,23 @@ export function update(state, input, dt, ctx) {
     if (v.health <= 0) return; // damageVehicle already ejected the player
     // F while driving = get out.
     if (a.interact) {
-      resetHold();
-      exitVehicle(state, v);
+      clearHold();
+      leaveVehicle(state, v);
     }
     return;
   }
 
   // --- on foot: enter / steal -------------------------------------------------
-  const near = nearestVehicle(state, p.x, p.z, 3.5);
+  const near = closestVehicle(state, p.x, p.z, 3.5);
   const holdingF = input.keys && input.keys.has('KeyF');
   if (!near) {
-    if (holdTargetId !== null) resetHold();
+    if (holdTargetId !== null) clearHold();
     if (state.uiPrompt) state.uiPrompt = null;
     return;
   }
   if (!near.locked) {
     if (input.actions.interact) {
-      resetHold();
+      clearHold();
       state.uiPrompt = null;
       enterVehicle(state, near);
     }
@@ -357,11 +357,11 @@ export function update(state, input, dt, ctx) {
     };
     if (holdT >= HOLD_SECONDS) {
       state.uiPrompt = null;
-      resetHold();
+      clearHold();
       enterVehicle(state, near);
     }
   } else {
-    if (holdTargetId !== null) resetHold();
+    if (holdTargetId !== null) clearHold();
     if (state.uiPrompt) state.uiPrompt = null;
   }
 }

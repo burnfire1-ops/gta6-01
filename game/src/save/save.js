@@ -1,14 +1,16 @@
 // Save slice — versioned localStorage slots + autosave (Teluk Cahaya).
-// Owns only the save format, slots and atomic writes. It never touches
-// rendering, sim logic or other slices. Plain JSON data only, no live refs.
+// This slice owns the save format, the slot keys and the write order only.
+// It never renders, simulates or touches any other slice. Saves hold plain
+// JSON data (ids, numbers, flags) — never live object references.
 //
 // Format (version 1):
-//   { version: 1, savedAt, player: {x,z,heading,health,armor,money,ammo,hasPistol},
+//   { version: 1, savedAt, player: {x, z, heading, health, armor, money, ammo, hasPistol},
 //     clock, mission: {id, objectiveIdx}, flags, vehiclesOwned, packagesFound }
-// Keys: 'teluk-cahaya-save-1'..'3', 'teluk-cahaya-autosave', backup '<key>-bak'.
-// Atomic write: temp '<key>-tmp' -> old main to backup -> temp into main -> drop temp.
-// Load: main first, backup on failure. localStorage may be absent (private
-// mode): every storage access is guarded, save fails quietly with false.
+// Keys: 'teluk-cahaya-save-1' .. '3', 'teluk-cahaya-autosave', backup '<key>-bak'.
+// Atomic write: temp '<key>-tmp' -> previous main copied to backup -> temp
+// moved into main -> temp key removed.
+// Load: main first, backup on failure. localStorage may be missing (private
+// mode): every storage access is guarded, and a failed save returns false.
 
 export const SAVE_VERSION = 1;
 
@@ -19,8 +21,8 @@ const SLOT_KEYS = {
   autosave: 'teluk-cahaya-autosave',
 };
 
-// The live state, bound in init(). load()/hasSave() work without it; save()
-// and applySave() need it.
+// Live game state, bound by init(). load() / hasSave() work without it;
+// save() and applySave() need it.
 let _state = null;
 
 function keyFor(slot) {
@@ -29,7 +31,6 @@ function keyFor(slot) {
   if (n === 1 || n === 2 || n === 3) return SLOT_KEYS[n];
   return null;
 }
-
 // --- guarded storage access (localStorage may not exist / may throw) ---
 function storageGet(key) {
   try { return window.localStorage.getItem(key); } catch (e) { return null; }
@@ -41,12 +42,14 @@ function storageSet(key, value) {
 function storageRemove(key) {
   try { window.localStorage.removeItem(key); } catch (e) { /* ignore */ }
 }
-
 // --- capture / validate / migrate ---
 
 function captureState() {
   const s = _state;
   const p = s.player || {};
+  const flags = s.flags || {};
+  const owned = Array.isArray(flags.vehiclesOwned) ? flags.vehiclesOwned.slice() : [];
+  const done = Array.isArray(flags.missionsDone) ? flags.missionsDone.slice() : [];
   return {
     version: SAVE_VERSION,
     savedAt: new Date().toISOString(),
@@ -66,18 +69,15 @@ function captureState() {
       objectiveIdx: s.mission ? (s.mission.objectiveIdx ?? 0) : 0,
     },
     flags: {
-      districtsUnlocked: s.flags ? (s.flags.districtsUnlocked ?? 1) : 1,
-      packagesFound: s.flags ? (s.flags.packagesFound ?? 0) : 0,
-      vehiclesOwned: s.flags && Array.isArray(s.flags.vehiclesOwned)
-        ? s.flags.vehiclesOwned.slice() : [],
-      storyDone: s.flags ? !!s.flags.storyDone : false,
-      missionsDone: s.flags && Array.isArray(s.flags.missionsDone)
-        ? s.flags.missionsDone.slice() : [],
+      districtsUnlocked: flags.districtsUnlocked ?? 1,
+      packagesFound: flags.packagesFound ?? 0,
+      vehiclesOwned: owned,
+      storyDone: !!flags.storyDone,
+      missionsDone: done,
     },
     // Duplicated at top level for easy inspection; flags is authoritative.
-    vehiclesOwned: s.flags && Array.isArray(s.flags.vehiclesOwned)
-      ? s.flags.vehiclesOwned.slice() : [],
-    packagesFound: s.flags ? (s.flags.packagesFound ?? 0) : 0,
+    vehiclesOwned: owned,
+    packagesFound: flags.packagesFound ?? 0,
   };
 }
 

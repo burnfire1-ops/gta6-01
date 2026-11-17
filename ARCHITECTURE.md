@@ -2,7 +2,7 @@
 
 Game: open-world crime, three.js r187, offline static files. Design source:
 `~/workspace/your_files/tesis-desain-game-gta6/tesis-desain-game-gta6.pdf`
-(21 pp). Genre rules: `open-world-crime` skill. Do NOT change design decisions.
+(21 pp). Genre rules: the `open-world-crime` skill. Do NOT change design decisions.
 
 ## 0. Golden rules
 
@@ -50,7 +50,7 @@ city = {
 }
 ```
 
-- A* is in `core/city.js` (pure). Traffic, police and peds all route on this
+- A* lives in `core/city.js` (pure). Traffic, police and peds all route on this
   graph. The minimap draws from this graph. A minimap that is not the real
   graph is a lie.
 - Buildings are AABBs `{minX,maxX,minZ,maxZ,h}` per block, generated

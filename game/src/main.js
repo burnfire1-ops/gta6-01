@@ -59,20 +59,44 @@ function quitToTitle() {
   hud.hud.classList.add('hidden');
   hud.pause.classList.add('hidden');
 }
-// Menu buttons are wired by ui/menus.js (systems registry). Fallback wiring
-// below runs only if the menus slice is absent, so the title screen always works.
-let systemsHandle = null;
-function wireFallbackMenus() {
-  document.querySelector('#btn-new').addEventListener('click', startGame);
-  document.querySelector('#btn-resume').addEventListener('click', () => {
+
+// FIX 1 — New Game button: wire the core menu buttons SYNCHRONOUSLY at boot,
+// not after the async slice loader finishes. The menus slice loads 15 modules
+// over sequential HEAD fetches + dynamic imports; on a slow machine that takes
+// seconds, and a click in that window hit a button with no listener at all
+// (the old code only wired buttons inside loadSystems().then()).
+// wireOnce() marks each button so ui/menus.js never double-attaches.
+function wireOnce(el, fn) {
+  if (!el || el.dataset.menuWired) return;
+  el.dataset.menuWired = '1';
+  el.addEventListener('click', fn);
+}
+function wireCoreMenus() {
+  wireOnce(document.querySelector('#btn-new'), () => {
+    try { state.events.emit('newGame', {}); } catch (e) { /* ignore */ }
+    startGame();
+  });
+  wireOnce(document.querySelector('#btn-continue'), () => {
+    const mod = (typeof window !== 'undefined' && window.__systems)
+      ? window.__systems.loaded.get('save') : null;
+    if (!mod || typeof mod.loadLatest !== 'function') {
+      showToast('Belum ada save.');
+      return;
+    }
+    const data = mod.loadLatest();
+    if (!data) { showToast('Belum ada save.'); return; }
+    let ok = true;
+    if (typeof mod.applySave === 'function') ok = mod.applySave(data);
+    if (!ok) { showToast('Save rusak, tidak bisa dimuat.'); return; }
+    startGame();
+  });
+  wireOnce(document.querySelector('#btn-resume'), () => {
     state.mode = 'playing';
     hud.pause.classList.add('hidden');
   });
-  document.querySelector('#btn-quit').addEventListener('click', quitToTitle);
-  document.querySelectorAll('[data-todo]').forEach((el) => {
-    el.addEventListener('click', () => showToast('Segera hadir di build berikutnya.'));
-  });
+  wireOnce(document.querySelector('#btn-quit'), quitToTitle);
 }
+wireCoreMenus();
 
 // Third-person camera: orbit by mouse (drag or pointer lock), spring-arm style
 // pull-in when a building blocks the view. Driving switches to chase camera.
@@ -98,8 +122,15 @@ function updateCamera(dt) {
       // Chase cam: high behind the car, looking ahead down the road, so the
       // car's own roof never fills the frame (it sits in the lower third).
       const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
-      camTarget.set(v.x + fx * 7, 1.4, v.z + fz * 7);
-      const pos = new THREE.Vector3(v.x - fx * 8.5, 3.6, v.z - fz * 8.5);
+      // FIX 2 — night shot: pull the camera a little higher, further back and
+      // looking further ahead, so the car, the street and the neon facades all
+      // read instead of one dark facade filling the frame.
+      const night = shot === 'night';
+      const camH = night ? 4.6 : 3.6;
+      const behind = night ? 11 : 8.5;
+      const ahead = night ? 11 : 7;
+      camTarget.set(v.x + fx * ahead, 1.4, v.z + fz * ahead);
+      const pos = new THREE.Vector3(v.x - fx * behind, camH, v.z - fz * behind);
       camera.position.lerp(pos, smooth);
       camera.lookAt(camTarget);
       return;
@@ -132,16 +163,19 @@ function applyShot(name) {
   if (name === 'start') { state.mode = 'title'; return; }
   if (name === 'night') {
     state.time = (0.62 * DAY_LENGTH) - CLOCK_OFFSET; // ~21:00 neon district
-    // Neon night driving: Raka coasting in his teal sport car up the neon
-    // district avenue, lamps + lit windows ahead, chase cam behind.
+    // Neon night driving: Raka coasting in his teal sport car west along the
+    // z=-200 neon avenue, lamps + lit windows ahead, chase cam behind.
+    // FIX 2 — the old setup parked the car at (200,-160) facing the 64-unit
+    // glass tower at (200,-200), so the tower filled the frame as one black
+    // slab. The new spot faces AWAY from the tower, down a long lit avenue.
     const hero = state.vehicles.find((v) => v.owned);
     if (hero) {
-      hero.x = 200; hero.z = -160; hero.heading = Math.PI; hero.speed = 12;
+      hero.x = 120; hero.z = -200; hero.heading = -Math.PI / 2; hero.speed = 12;
       hero.parked = false;
       enterVehicle(state, hero);
     } else {
-      state.player.x = 200; state.player.z = -160; state.player.heading = Math.PI;
-      input.camYaw = Math.PI;
+      state.player.x = 120; state.player.z = -200; state.player.heading = -Math.PI / 2;
+      input.camYaw = -Math.PI / 2;
     }
     startGame();
     return;
@@ -207,11 +241,14 @@ window.__version = 'teluk-cahaya-0.1-foundation';
 
 // Load gameplay slices (vehicles, traffic, police, missions, HUD, audio, save)
 // if their files exist; missing slices are skipped with a console warning.
+let systemsHandle = null;
 loadSystems({ state, city, scene, renderer, camera, input, startGame, quitToTitle, showToast })
   .then((handle) => {
     systemsHandle = handle;
     window.__systems = handle;
-    if (!handle.loaded.has('menus')) wireFallbackMenus();
+    // Core buttons are already wired synchronously at boot (FIX 1); this only
+    // re-runs the wiring if the menus slice is absent, as a safety net.
+    if (!handle.loaded.has('menus')) wireCoreMenus();
     // Deferred shot setups (chase/hud) need the missions slice.
     if (shot === 'chase' || shot === 'hud') {
       const missions = handle.loaded.get('missions');
@@ -224,6 +261,12 @@ loadSystems({ state, city, scene, renderer, camera, input, startGame, quitToTitl
     // Count the 30 ready-frames from the staged shot, not from boot.
     shotFrames = 0;
     window.__shotReady = false;
+  })
+  .catch((e) => {
+    // A slice-loader failure must never leave the title screen dead: the
+    // core buttons are already wired, this just surfaces the error.
+    console.warn('[main] loadSystems failed:', e && e.message ? e.message : e);
+    wireCoreMenus();
   });
 
 renderer.setAnimationLoop(loop);

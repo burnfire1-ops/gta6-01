@@ -1,6 +1,7 @@
-// Renderer, scene, camera and light rig (three.js r187). One directional sun
-// (intensity ~2.5 per the thesis) + hemisphere fill, ACES tone mapping,
-// PCF shadows with the shadow camera following the player.
+// Renderer slice: WebGL renderer, scene, third-person camera and the day/night
+// light rig for Teluk Cahaya (three.js r187). One sun directional light plus a
+// hemisphere fill; ACES tone mapping, PCF shadows, shadow frustum tracks the
+// player. A dim blue moon light takes over after dark.
 import * as THREE from 'three';
 import { skyColors, sunState, nightFactor } from '../core/clock.js';
 
@@ -20,9 +21,12 @@ export function createRenderer(canvas) {
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1200);
   camera.position.set(-210, 12, -210);
 
+  // Sky/ground fill light; its colour tracks the sky so dawn/dusk tint the city.
   const hemi = new THREE.HemisphereLight(0xbbddff, 0x8a6a55, 1.0);
   scene.add(hemi);
 
+  // Key sun light. The shadow camera is a 180-unit box centred on the player
+  // each frame (repositioned in update()), so shadows stay crisp nearby.
   const sun = new THREE.DirectionalLight(0xffffff, 2.5);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -33,6 +37,7 @@ export function createRenderer(canvas) {
   scene.add(sun);
   scene.add(sun.target);
 
+  // Night fill: only active once the sun has set.
   const moon = new THREE.DirectionalLight(0xa8b8ff, 0.0);
   moon.position.set(-40, 90, -30);
   scene.add(moon);

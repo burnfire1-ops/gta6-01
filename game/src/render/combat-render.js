@@ -1,6 +1,6 @@
 // Teluk Cahaya — combat render slice (view of core/combat.js).
 // One dark-red person rig per enemy (makePerson/syncPerson from the shared
-// characters rig), a 'down' enemy lies flat for 5 s, and a small crosshair
+// characters rig). A 'down' enemy lies flat for 5 s, and a small crosshair
 // div appears only while aiming on foot. This is the only DOM this slice
 // creates; every other HUD element belongs to the HUD slice.
 import * as THREE from 'three';
@@ -94,7 +94,7 @@ export function sync(state, dt) {
     // Down enemies lie flat on their back until the core removes them.
     group.rotation.x = e.state === 'down' ? -Math.PI / 2 : 0;
   }
-  // Remove meshes for enemies the core dropped (down timer expired / cleared).
+  // Drop meshes for enemies the core removed (down timer expired / cleared).
   for (const [id, group] of meshes) {
     if (!seen.has(id)) {
       scene.remove(group);

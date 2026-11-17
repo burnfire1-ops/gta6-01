@@ -1,5 +1,6 @@
-// Low-poly people: one shared rig (torso, head, arms, legs) with procedural
-// walk/punch animation from speed. Player, pedestrians and police share it.
+// Low-poly people: one shared rig (torso, head, cap, arms, legs) with a
+// procedural walk/punch cycle driven by speed. The player, pedestrians and
+// police all share this rig — only the palette changes.
 import * as THREE from 'three';
 
 export function makePerson({ jacket = 0xf2b234, pants = 0x2a3242, skin = 0xc98a5e, cap = 0x1d2f52 } = {}) {
@@ -11,6 +12,8 @@ export function makePerson({ jacket = 0xf2b234, pants = 0x2a3242, skin = 0xc98a5
   head.position.y = 1.72;
   const capMesh = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.14, 0.46), mat(cap));
   capMesh.position.y = 1.96;
+  // Arms and legs hang from pivot groups at the shoulder/hip so the walk
+  // cycle can swing them; geometry is translated down from the pivot.
   const armL = new THREE.Group(); armL.position.set(-0.38, 1.42, 0);
   const armR = new THREE.Group(); armR.position.set(0.38, 1.42, 0);
   const armGeo = new THREE.BoxGeometry(0.2, 0.62, 0.2);
@@ -42,11 +45,11 @@ export function syncPerson(mesh, x, y, z, heading, speed, dt, punchT = 0) {
   p.armL.rotation.x = -s * 0.8;
   p.armR.rotation.x = s * 0.8;
   if (punchT > 0) {
-    // Punch: right arm drives forward.
+    // Punch: the right arm drives forward on a sine arc over 0.32 s.
     const k = Math.sin((0.32 - punchT) / 0.32 * Math.PI);
     p.armR.rotation.x = -1.4 * k;
     p.armL.rotation.x = 0.4 * k;
   }
-  // Idle breathing.
+  // Idle breathing: a slow bob of the torso on top of the walk cycle.
   p.torso.position.y = 1.12 + Math.sin(mesh.userData.phase * 0.5) * 0.015;
 }

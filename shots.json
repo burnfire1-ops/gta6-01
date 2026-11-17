@@ -1,6 +1,1 @@
-[
-  { "name": "1-cover.png", "query": "?shot=cover&seed=1" },
-  { "name": "2-chase.png", "query": "?shot=chase&seed=1" },
-  { "name": "3-hud.png", "query": "?shot=hud&seed=1" },
-  { "name": "4-night.png", "query": "?shot=night&seed=1" }
-]
+[{"name":"1-cover.png","query":"?shot=cover&seed=1"},{"name":"2-chase.png","query":"?shot=chase&seed=1"},{"name":"3-hud.png","query":"?shot=hud&seed=1"},{"name":"4-night.png","query":"?shot=night&seed=1"}]

@@ -1,8 +1,9 @@
-// Teluk Cahaya — combat slice (core sim, pure: no three.js).
-// Owns state.enemies, the pistol + fists, and enemy AI (idle/chase/attack/down).
-// Missions slice calls spawnEnemy/clearEnemies. wanted.js reacts to the
-// 'crimeSeen' / 'healthChanged' events emitted here; pedestrians react to
-// 'punch' / 'crimeSeen' (panic + witness reports).
+// Teluk Cahaya — combat slice (core simulation, pure: no three.js).
+// Owns state.enemies, the pistol + fists, and enemy AI (idle / chase /
+// attack / down). Missions call spawnEnemy / clearEnemies. wanted.js reacts
+// to 'crimeSeen' / 'healthChanged' here; pedestrians react to 'punch' /
+// 'crimeSeen' (panic + witness reports).
+
 export const MAG_SIZE = 12;
 export const RESERVE_START = 48;
 export const PUNCH_RANGE = 2.2;
@@ -28,7 +29,7 @@ const TOAST_THROTTLE = 3;
 
 let nextId = 1;
 let subscribed = false;
-// Runtime timers (reset by init, single game instance like other slices).
+// Runtime timers (reset by init; one game instance like the other slices).
 let rt = null;
 function freshRt() {
   return { punchCd: 0, gunCd: 0, reloadT: 0, toasts: {} };
@@ -36,8 +37,7 @@ function freshRt() {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-// Discrete action, whether the buffer is still live (direct callers) or
-// was already consumed into input.actions by input.update (main loop).
+// A discrete action: buffer still live (direct callers) or already consumed into input.actions.
 function pressed(input, action) {
   if (!input) return false;
   if (input.actions && input.actions[action]) return true;
@@ -56,6 +56,7 @@ function aiming(input) {
   return false;
 }
 
+// Toast helper with a per-message throttle so one state cannot spam.
 function toast(state, ctx, text) {
   const last = rt.toasts[text];
   if (last !== undefined && state.time - last < TOAST_THROTTLE) return;
@@ -87,9 +88,8 @@ export function spawnEnemy(state, x, z, opts = {}) {
     heading: opts.heading ?? 0,
     health: opts.health ?? 100,
     state: 'idle', // 'idle' | 'chase' | 'attack' | 'down'
-    attackT: 0,
-    downT: 0,
-    // internals (owned by this slice, read by the render slice)
+    attackT: 0, downT: 0,
+    // Internals (owned by this slice, read by the render slice).
     flinchT: 0,
     punchT: 0,
     speed: 0,
@@ -114,8 +114,7 @@ function damageEnemy(state, e, dmg) {
   e.flinchT = FLINCH_TIME;
   state.events.emit('combatHit', { target: 'enemy', id: e.id, damage: dmg });
   if (e.health <= 0) {
-    e.health = 0;
-    e.state = 'down';
+    e.health = 0; e.state = 'down';
     e.downT = DOWN_TIME;
     e.flinchT = 0;
     e.speed = 0;
@@ -137,11 +136,11 @@ function cameraForwardXZ(ctx, state) {
     const len = Math.hypot(fx, fz);
     if (len > 1e-6) return { x: fx / len, z: fz / len };
   }
-  // Fallback: the direction the player faces.
-  const h = state.player.heading;
+  const h = state.player.heading; // fallback: the direction the player faces
   return { x: Math.sin(h), z: Math.cos(h) };
 }
 
+// Soft lock-on: nearest living enemy inside the aim cone and range.
 function computeAimTarget(state, ctx) {
   const p = state.player;
   const fwd = cameraForwardXZ(ctx, state);
@@ -164,10 +163,10 @@ function resolvePunch(state) {
   const p = state.player;
   const fx = Math.sin(p.heading), fz = Math.cos(p.heading);
   const cosLimit = Math.cos(PUNCH_HALF_ARC);
-  // One 'punch' event per swing (audio + ped panic listen to it), then the
-  // hit resolution below. Combat owns this event; player.js only animates.
+  // One 'punch' event per swing (audio + ped panic listen); combat owns it,
+  // player.js only animates. Hit resolution follows.
   state.events.emit('punch', { x: p.x, z: p.z });
-  // Nearest enemy inside range + 60 deg arc.
+  // Nearest enemy inside range + the 60 deg arc.
   let bestE = null, bestD = PUNCH_RANGE;
   for (const e of state.enemies) {
     if (e.state === 'down') continue;
@@ -290,6 +289,7 @@ function updateEnemy(state, e, dt, city) {
   return true;
 }
 
+// Keep living enemies from stacking on one point (O(n^2), few enemies).
 function separateEnemies(state) {
   const list = state.enemies;
   for (let i = 0; i < list.length; i++) {
@@ -378,5 +378,5 @@ export function update(state, input, dt, ctx) {
   separateEnemies(state);
 }
 
-// Render is handled by render/combat-render.js; sim needs no per-frame sync.
+// Render is handled by render/combat-render.js; the sim needs no per-frame sync.
 export function sync(state, dt) {}

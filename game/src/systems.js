@@ -3,6 +3,9 @@
 // export init(ctx), update(state, input, dt, ctx) and/or sync(state, dt).
 // Load order is the update order: vehicles physics first, then the drivers
 // (traffic, police), then wanted, missions, and finally UI/audio/save.
+// The menus slice wires the title/pause buttons, but main.js already wires
+// the core buttons synchronously at boot (FIX 1), so a slow slice load can
+// never leave the title screen dead; menus.js skips buttons main.js wired.
 const SLICES = [
   ['vehicles', './core/vehicles.js'],
   ['vehiclesRender', './render/vehicles-render.js'],
@@ -36,6 +39,7 @@ export async function loadSystems(ctx) {
       loaded.set(key, mod);
       console.log(`[systems] loaded ${key}`);
     } catch (e) {
+      // One bad slice must never kill the rest: warn and move on.
       console.warn(`[systems] ${key} not loaded (${path}): ${e.message}`);
     }
   }
