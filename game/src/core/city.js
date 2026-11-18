@@ -65,8 +65,29 @@ function segmentHitsAABB(x0, z0, x1, z1, b) {
   return true;
 }
 
+// Deterministic 0..1 hash of (seed, x, z): house roof/porch vary without
+// consuming the shared rng stream, so the rest of the city is unchanged.
+function hash2(seed, x, z) {
+  let h = (seed ^ 0x9e3779b9) >>> 0;
+  h = Math.imul(h ^ Math.round(x * 100), 0x85ebca6b);
+  h = Math.imul(h ^ Math.round(z * 100), 0xc2b2ae35);
+  h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15;
+  return (h >>> 0) / 4294967296;
+}
+
 export function createCity(seed) {
   const rng = makeRng(seed);
+
+  // Landmarks (rendered by render/landmarks.js, drawn on the big map):
+  // Menara Cahaya (spire, neon), Taman Cahaya (park, boulevard),
+  // Stadion Teluk (stadium, port). Their blocks stay clear of buildings.
+  const landmarks = [
+    { id: 'spire', name: 'Menara Cahaya', kind: 'spire', x: 140, z: -140, h: 95 },
+    { id: 'park', name: 'Taman Cahaya', kind: 'park', cx: -60, cz: -60 },
+    { id: 'stadium', name: 'Stadion Teluk', kind: 'stadium', cx: -140, cz: 140 },
+  ];
+  const landmarkBlocks = new Set(landmarks.map((lm) =>
+    `${Number.isFinite(lm.x) ? lm.x : lm.cx},${Number.isFinite(lm.z) ? lm.z : lm.cz}`));
 
   // Intersections.
   const nodes = [];
@@ -102,9 +123,12 @@ export function createCity(seed) {
       const block = { cx, cz, district, buildings: [] };
       blocks.push(block);
       if (openBlocks.has(`${cx},${cz}`)) continue;
+      const isLandmark = landmarkBlocks.has(`${cx},${cz}`);
       const count = rng.int(1, 3);
       for (let i = 0; i < count; i++) {
-        const [hMin, hMax] = DISTRICT_HEIGHT[district];
+        // Residential builds houses: lower (3-5), flagged for the landmarks
+        // slice. Same rng call count as before, so the stream is unchanged.
+        const [hMin, hMax] = district === 'residential' ? [3, 5] : DISTRICT_HEIGHT[district];
         const w = rng.range(8, 15), d = rng.range(8, 15), h = rng.range(hMin, hMax);
         const x = cx + rng.range(-8, 8), z = cz + rng.range(-8, 8);
         const b = {
@@ -113,6 +137,14 @@ export function createCity(seed) {
           glass: district === 'neon' && rng.chance(0.35),
           minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2,
         };
+        if (district === 'residential') {
+          b.house = true;
+          b.roof = hash2(seed, x, z) < 0.5 ? 'gable' : 'hip';
+          b.porch = hash2(seed + 101, x, z) < 0.6;
+        }
+        // Landmark blocks: generate-then-discard keeps the rng stream (and
+        // every other block) identical while leaving the block clear.
+        if (isLandmark) continue;
         block.buildings.push(b);
         buildings.push(b);
       }
@@ -151,7 +183,7 @@ export function createCity(seed) {
     if (n.ix % 2 === 0 && n.iz % 2 === 0) trafficLights.push({ nodeId: n.id, offset: ((n.ix + n.iz) % 4) * 3, period: 12 });
   }
 
-  const city = { seed, nodes, edges, blocks, buildings, pois, packages, trafficLights };
+  const city = { seed, nodes, edges, blocks, buildings, landmarks, pois, packages, trafficLights };
 
   city.astar = function astar(fromId, toId) {
     if (fromId === toId) return [fromId];
