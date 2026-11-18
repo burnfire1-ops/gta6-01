@@ -1,16 +1,8 @@
-// Audio Teluk Cahaya —
-// Dibangun dari tesis §5
 // SFX, Ambience, UI;
-// kejar); sirene men-duck
 //
 // Kontrak: createAudio()
-// setMood(mood), setMuted
-// ensure() HANYA dipanggi
-// AudioContext tidak
-// sebelum ensure() (no-op
 
 const CHORDS = {
-  // Am - F - C - G (freku
   Am: [110.0, 130.81, 164.81],
   F: [87.31, 110.0, 130.81],
   C: [130.81, 164.81, 196.0],
@@ -85,7 +77,6 @@ export function createAudio() {
 
       startMusicScheduler();
     } catch {
-      // Audio tidak terse
       ctx = null;
     }
   }
@@ -96,13 +87,11 @@ export function createAudio() {
         n.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
         n.oscs.forEach((o) => o.stop(ctx.currentTime + 0.4));
       } catch {
-        // Oscillator suda
       }
     }
     chordNodes = [];
   }
 
-  // Satu chord pad: tiap
   function playChord(name) {
     if (!ctx || !musicBus) return;
     stopChord();
@@ -140,7 +129,6 @@ export function createAudio() {
     return noiseBuffer;
   }
 
-  // Hat pelan: sepercik
   function playHat() {
     if (!ctx || !musicBus) return;
     const t = ctx.currentTime;
@@ -200,7 +188,6 @@ export function createAudio() {
     }
     engineOsc.frequency.setTargetAtTime(60 + 140 * rpm, t, 0.05);
     engineFilter.frequency.setTargetAtTime(400 + 1200 * rpm, t, 0.05);
-    // Gain kecil: mesin h
     engineGain.gain.setTargetAtTime(rpm > 0.02 ? 0.05 + 0.05 * rpm : 0, t, 0.1);
   }
 
@@ -242,7 +229,6 @@ export function createAudio() {
         // Sudah berhenti.
       }
     }
-    // Duck musik di bawah
     if (musicDuck) {
       musicDuck.gain.setTargetAtTime(on ? 0.5 : 1.0, t, 0.15);
     }

@@ -1,8 +1,4 @@
-// Procedural Teluk Cahaya
-// centre lines, district-
 // harbour bridge), palms,
-// built from three.js
-// are fetched. Buildings
 
 import * as THREE from 'three';
 import { CITY, PALETTE } from './config.js';
@@ -39,7 +35,6 @@ function facadeTextures(base, rng, litRatio) {
   const emissiveMap = canvasTexture(128, 256, (g, w, h) => {
     g.fillStyle = '#000000';
     g.fillRect(0, 0, w, h);
-    // Windows glow at nig
     for (let r = 0; r < rows; r += 1) {
       for (let c = 0; c < cols; c += 1) {
         if (rng() < litRatio) {
@@ -212,7 +207,6 @@ export function buildCity(scene, graph, rng) {
     rail.position.set(-260, 2.2, 120 + dz);
     group.add(rail);
   }
-  // Small island under
   const island = new THREE.Mesh(
     new THREE.CylinderGeometry(16, 20, 2, 10),
     new THREE.MeshStandardMaterial({ color: PALETTE.sand, roughness: 1 }),
@@ -340,7 +334,6 @@ export function buildCity(scene, graph, rng) {
     group.add(sign);
   }
 
-  // Neon district glow
   const neonMat = new THREE.MeshStandardMaterial({
     color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0,
   });

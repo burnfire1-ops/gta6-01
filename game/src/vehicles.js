@@ -1,11 +1,4 @@
-// vehicles.js — Kendaraan
-// Satu rig mobil parametr
-// mobil parkir + mobil
-// fleet.update hanya
 //
-// Konvensi arah (dipakai
-// (sin(heading), cos(head
-// Belok kiri (tombol
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
@@ -63,7 +56,6 @@ export function normalizeDriveInput(input) {
   const left = !!(input.left || has('KeyA') || has('ArrowLeft'));
   const right = !!(input.right || has('KeyD') || has('ArrowRight'));
   out.throttle = (fwd ? 1 : 0) - (back ? 1 : 0);
-  // Belok kiri menaikkan
   out.steer = (left ? 1 : 0) - (right ? 1 : 0);
   out.handbrake = !!(input.handbrake || input.drift || input.space || has('Space'));
   return out;
@@ -84,7 +76,6 @@ export function buildCarMesh(type) {
   body.castShadow = true;
   g.add(body);
 
-  // Kabin: van lebih ting
   const cabinLen = type === 'van' ? 3.0 : type === 'pickup' ? 1.4 : 2.0;
   const cabinH = type === 'van' ? 0.85 : 0.6;
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.7, cabinH, cabinLen), glass);
@@ -98,7 +89,6 @@ export function buildCarMesh(type) {
     g.add(bed);
   }
   if (type === 'police') {
-    // Pintu putih: dua pa
     const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.4, roughness: 0.4 });
     for (const s of [-1, 1]) {
       const door = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 1.6), white);
@@ -122,7 +112,6 @@ export function buildCarMesh(type) {
     g.userData.lightbar = { red: redMat, blue: blueMat };
   }
 
-  // Lampu depan (putih
   const headMat = new THREE.MeshStandardMaterial({
     color: 0xfff2c0, emissive: 0xffe9a0, emissiveIntensity: 1.4,
   });
@@ -137,7 +126,6 @@ export function buildCarMesh(type) {
     g.add(h, t);
   }
 
-  // 4 roda: silinder, sum
   const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 14);
   const wheels = [];
   for (const [wx, wz] of [[-0.95, 1.35], [0.95, 1.35], [-0.95, -1.35], [0.95, -1.35]]) {
@@ -178,7 +166,6 @@ export function driveVehicle(car, input, dt, ctx) {
   if (Math.abs(car.speed) < 0.05 && inp.throttle === 0) car.speed = 0;
   car.speed = clamp(car.speed, -reverseTop, top);
 
-  // Steering: makin cepat
   const steerAuthority = clamp(Math.abs(car.speed) / 6, 0, 1);
   const turnRate = (inp.handbrake ? 3.4 : 2.3) * steerAuthority;
   const dir = car.speed >= 0 ? 1 : -1;
@@ -187,7 +174,6 @@ export function driveVehicle(car, input, dt, ctx) {
   car.pos.x += Math.sin(car.heading) * car.speed * dt;
   car.pos.z += Math.cos(car.heading) * car.speed * dt;
 
-  // Tabrakan gedung: pant
   const colliders = ctx && ctx.city && Array.isArray(ctx.city.colliders) ? ctx.city.colliders : null;
   if (colliders) {
     for (const c of colliders) {
@@ -207,7 +193,6 @@ export function driveVehicle(car, input, dt, ctx) {
     }
   }
 
-  // Clamp di dalam kota
   if (car._bounds) {
     car.pos.x = clamp(car.pos.x, car._bounds.minX, car._bounds.maxX);
     car.pos.z = clamp(car.pos.z, car._bounds.minZ, car._bounds.maxZ);
@@ -221,7 +206,6 @@ export function driveVehicle(car, input, dt, ctx) {
 export function stealCar(car, player, ctx) {
   if (!car || !player) return false;
   if (car.driver === 'npc') {
-    // Pengemudi lama jadi
     car.ejectedPedestrian = { x: car.pos.x + 2, z: car.pos.z + 2, panic: true, t: 0 };
     car.driver = null;
   }
@@ -245,7 +229,6 @@ export function stealCar(car, player, ctx) {
 export function createVehicleFleet(scene, graph, rng) {
   const rand = typeof rng === 'function' ? rng : Math.random;
   const cars = [];
-  // Batas kota dari node
   let bounds = { minX: -230, maxX: 230, minZ: -230, maxZ: 230 };
   if (graph && Array.isArray(graph.nodes) && graph.nodes.length) {
     const xs = graph.nodes.map((n) => n.x);
@@ -318,8 +301,6 @@ export function createVehicleFleet(scene, graph, rng) {
     return best;
   }
 
-  // Parkir ~14 mobil di
-  // Offset trotoar ~5 uni
   const parkedTypes = ['sport', 'sport', 'sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi',
     'sedan', 'van', 'pickup', 'taxi', 'sedan', 'sedan'];
   for (const t of parkedTypes) {
@@ -331,7 +312,6 @@ export function createVehicleFleet(scene, graph, rng) {
 
   function update(dt, ctx) {
     const d = Math.min(Math.max(dt || 0, 0), 0.1);
-    // Mobil yang dikemudi
     const player = ctx && ctx.player;
     if (player && player.currentCar && cars.includes(player.currentCar)) {
       driveVehicle(player.currentCar, ctx.input, d, ctx);
@@ -340,7 +320,6 @@ export function createVehicleFleet(scene, graph, rng) {
         player.pos.z = player.currentCar.pos.z;
       }
     }
-    // Sinkron mesh + anim
     for (const car of cars) {
       if (!player || player.currentCar !== car) syncMesh(car);
       const wheels = car.mesh.userData.wheels || [];

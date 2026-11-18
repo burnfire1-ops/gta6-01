@@ -1,4 +1,3 @@
-// Named-action input with
 // presses (interact,
 // taken once by the loop,
 // never counted twice.
@@ -50,7 +49,6 @@ export function createInput(canvas) {
   window.addEventListener('keyup', (event) => {
     down.delete(event.code);
   });
-  // A key released while
   window.addEventListener('blur', () => {
     down.clear();
     mouseDX = 0;
@@ -63,7 +61,6 @@ export function createInput(canvas) {
       mouseDY += event.movementY || 0;
     }
   });
-  // Click the canvas to
   canvas.addEventListener('click', () => {
     if (document.pointerLockElement !== canvas) {
       canvas.requestPointerLock?.();

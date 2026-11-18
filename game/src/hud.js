@@ -1,22 +1,12 @@
-// HUD Teluk Cahaya —
 // Dibangun dari tesis §5:
-// data graph jalan yang
-// wanted stars kanan
-// dan menu sebagai stack
 //
 // Kontrak: createHud()
 // hideMenus(), toast(msg)
-// update(state) dipanggil
-// nilainya berubah (cache
-// polling buta, ia bereak
-// Semua elemen dicari
-// index.html ditulis
 
 const STAR_FULL = '★';
 const STAR_EMPTY = '☆';
 const MAX_WANTED = 5;
 
-// Jarak dunia (meter
 const MINIMAP_RANGE = 140;
 
 function clamp(v, lo, hi) {
@@ -34,7 +24,6 @@ function formatJam(timeHours) {
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
-// Normalisasi satu titik
 function normPoint(p) {
   if (!p || typeof p !== 'object') return null;
   const x = typeof p.x === 'number' ? p.x : 0;
@@ -42,7 +31,6 @@ function normPoint(p) {
   return { x, z };
 }
 
-// Satu ujung edge bisa
 function resolveEndpoint(end, nodes) {
   if (typeof end === 'number') return normPoint(nodes ? nodes[end] : null);
   return normPoint(end);
@@ -61,7 +49,6 @@ function edgePoints(edge, nodes) {
   return a && b ? { a, b } : null;
 }
 
-// Heading: angka radian
 function headingToAngle(heading) {
   if (typeof heading === 'number') return heading;
   const p = normPoint(heading);
@@ -96,11 +83,6 @@ export function createHud() {
     speed: $('speed'),
   };
 
-  // Minimap harus di kiri
-  // index.html canvas #mi
-  // bar), sehingga canvas
-  // menjadi anak pertama
-  // canvas duduk di atas
   if (el.minimap) {
     try {
       const wrap = document.getElementById('minimap-wrap');
@@ -112,7 +94,6 @@ export function createHud() {
     }
   }
 
-  // Nilai terakhir yang
   const last = {
     health: null,
     armor: null,
@@ -135,8 +116,6 @@ export function createHud() {
 
   const mm = el.minimap ? el.minimap.getContext('2d') : null;
 
-  // Bar memakai pola trac
-  // dalamnya adalah fill-
   function setBar(barEl, textEl, pct, label) {
     if (!barEl && !textEl) return;
     const p = clamp(Math.round(pct), 0, 100);
@@ -155,7 +134,6 @@ export function createHud() {
     const now = performance.now();
     const playerPos = normPoint(data.playerPos);
     if (!playerPos) return;
-    // Gambar ulang minima
     if (
       now - lastMinimapAt < 100 &&
       lastMinimapPlayer &&
@@ -173,7 +151,6 @@ export function createHud() {
     const r = Math.min(w, h) / 2 - 2;
     const scale = r / MINIMAP_RANGE;
     const toX = (x) => cx + (x - playerPos.x) * scale;
-    // Utara di atas: z du
     const toY = (z) => cy + (z - playerPos.z) * scale;
     const inView = (x, z) => {
       const dx = toX(x) - cx;
@@ -187,11 +164,9 @@ export function createHud() {
     mm.arc(cx, cy, r, 0, Math.PI * 2);
     mm.clip();
 
-    // Latar navy gelap kh
     mm.fillStyle = 'rgba(10, 16, 32, 0.85)';
     mm.fillRect(0, 0, w, h);
 
-    // Jalan dari graph ya
     const graph = data.graph;
     if (graph && Array.isArray(graph.edges)) {
       mm.strokeStyle = '#8b93a3';
@@ -214,7 +189,6 @@ export function createHud() {
       mm.fillRect(toX(safe.x) - 4, toY(safe.z) - 4, 8, 8);
     }
 
-    // Marker misi: belah
     const marker = normPoint(data.missionMarker);
     if (marker && inView(marker.x, marker.z)) {
       const mx = toX(marker.x);
@@ -235,7 +209,6 @@ export function createHud() {
       mm.fill();
     }
 
-    // Polisi biru — hanya
     if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
       mm.fillStyle = '#4f8ef7';
       for (const u of data.policeUnits) {
@@ -248,7 +221,6 @@ export function createHud() {
       }
     }
 
-    // Pemain: panah kunin
     mm.save();
     mm.translate(cx, cy);
     mm.rotate(headingToAngle(data.playerHeading));
@@ -267,7 +239,6 @@ export function createHud() {
 
     mm.restore();
 
-    // Bingkai bundar + ik
     mm.strokeStyle = 'rgba(238, 241, 245, 0.9)';
     mm.lineWidth = 2;
     mm.beginPath();
@@ -280,18 +251,12 @@ export function createHud() {
     mm.fillText('N', cx, 4);
   }
 
-  // Normalisasi dua bentu
-  // objectiveText, vehicl
-  // (flat: health, object
-  // playerHeading, missio
   function normalize(raw) {
     const mm = raw.minimap || {};
     const policeUnits = mm.policeUnits ?? raw.policeUnits ?? (Array.isArray(raw.police) ? raw.police : []);
     const wanted = raw.wanted ?? 0;
     let escaping = raw.wantedEscaping;
     if (typeof escaping !== 'boolean') {
-      // Turunan dari tesi
-      // melihat pemain (u
       escaping =
         wanted > 0 &&
         Array.isArray(policeUnits) &&
@@ -335,7 +300,6 @@ export function createHud() {
       last.health = state.health;
       setBar(el.healthBar, el.healthText, state.health, String(Math.round(state.health)));
       if (el.healthBar) {
-        // Berkedip merah
         el.healthBar.classList.toggle('low', state.health < 25);
       }
     }
@@ -349,7 +313,6 @@ export function createHud() {
       last.money = state.money;
       if (el.money) {
         el.money.textContent = formatRupiah(state.money);
-        // Kilas singkat s
         el.money.classList.remove('flash');
         void el.money.offsetWidth;
         el.money.classList.add('flash');
@@ -363,9 +326,6 @@ export function createHud() {
         last.wanted = wanted;
         last.escaping = escaping;
         if (el.wantedStars) {
-          // Span per bint
-          // dari index.ht
-          // Animasi kedip
           el.wantedStars.textContent = '';
           for (let i = 0; i < MAX_WANTED; i += 1) {
             const span = document.createElement('span');
@@ -388,7 +348,6 @@ export function createHud() {
       last.objectiveText = state.objectiveText;
       if (el.objectiveText) el.objectiveText.textContent = state.objectiveText;
     }
-    // Jarak ke marker mis
     let distanceText = '';
     {
       const pp = normPoint(state.minimap.playerPos);
@@ -406,7 +365,6 @@ export function createHud() {
         last.objectiveTitle || last.objectiveText ? 'block' : 'none';
     }
 
-    // Panel kendaraan: na
     const driving = typeof state.vehicleName === 'string' && state.vehicleName.length > 0;
     if (state.vehicleName !== last.vehicleName) {
       last.vehicleName = state.vehicleName || null;
@@ -417,12 +375,10 @@ export function createHud() {
       if (el.vehicleHealthBar) {
         setBar(el.vehicleHealthBar, el.vehicleHealthText, state.vehicleHealth, String(Math.round(state.vehicleHealth)));
       } else if (el.vehicleHealthText) {
-        // Tanpa elemen ba
         el.vehicleHealthText.textContent = 'Kesehatan ' + Math.round(state.vehicleHealth) + '%';
       }
     }
     if (el.vehiclePanel) {
-      // CSS #vehicle-pane
       el.vehiclePanel.style.display = driving ? 'block' : 'none';
     }
 
@@ -456,9 +412,6 @@ export function createHud() {
   }
 
   function showMenu(name) {
-    // Menu memakai .menu{
-    // style.display='' sa
-    // Set display eksplis
     const show = (node, on) => {
       if (!node) return;
       node.style.display = on ? 'flex' : 'none';
@@ -468,7 +421,6 @@ export function createHud() {
     show(el.menuPause, name === 'pause');
     show(el.menuControls, name === 'controls');
     last.menu = name;
-    // Fokus ke tombol per
     const visible =
       name === 'title' ? el.menuTitle : name === 'pause' ? el.menuPause : name === 'controls' ? el.menuControls : null;
     if (visible) {
@@ -476,7 +428,6 @@ export function createHud() {
         const btn = visible.querySelector('button');
         if (btn) btn.focus();
       } catch {
-        // Fokus gagal buk
       }
     }
   }
@@ -500,7 +451,6 @@ export function createHud() {
     try {
       window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
     } catch {
-      // Event gagal bukan
     }
   }
 

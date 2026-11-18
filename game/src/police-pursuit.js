@@ -1,4 +1,3 @@
-// police-pursuit.js —
 // FILE PALING PENTING.
 // skill open-world-crime,
 //  - Hysteresis waypoint:

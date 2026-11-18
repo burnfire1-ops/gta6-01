@@ -1,6 +1,5 @@
 // polisi mengejar.
 // game = objek dari main.
-// dilewati diam-diam —
 // Scene (tesis §3):
 //           menara kaca,
 
@@ -302,6 +301,120 @@ function exitVehicle(game) {
   }
 }
 
+// Mobil pemain di shot malam (21:00) hampir hitam: cat teal gelap di bawah
+// moonlight 0.35. Terangkan cat + naikkan emissive lampu rem, hanya di shot
+// end (fresh page per shot, mobil siang/play tidak tersentuh).
+function brightenNightCar(vehicle) {
+  if (!vehicle || !vehicle.mesh || !isFn(vehicle.mesh.traverse)) return;
+  vehicle.mesh.traverse((o) => {
+    const m = o.material;
+    if (!m || !m.color || typeof m.color.getHex !== 'function') return;
+    const c = m.color.getHex();
+    if (c === 0x2ec4b6 || c === 0x14b8a6) {
+      m.color.setHex(0x7ef0dd);
+      if (m.emissive && typeof m.emissive.setHex === 'function') {
+        m.emissive.setHex(0x0f766e);
+        m.emissiveIntensity = 0.5;
+      }
+    } else if (c === 0xcc1111 && m.emissive) {
+      m.emissiveIntensity = 2.6;
+    }
+  });
+}
+
+// Penuhi frame shot dengan NPC yang sudah ada (bukan sistem baru): pejalan
+// kaki di trotoar sisi dalam kota + mobil NPC di lajur berlawanan menghadap
+// kamera. Dipanggil SETELAH advanceSim supaya posisi staging tidak hanyut.
+function stageCrowd(g) {
+  const p = readPos(g.player);
+  if (!p) return;
+  const h = typeof g.player.heading === 'number' ? g.player.heading : 0;
+  const fx = Math.sin(h);
+  const fz = Math.cos(h);
+  const rx = Math.cos(h);
+  const rz = -Math.sin(h);
+  const side = (-p.x * rx + -p.z * rz) >= 0 ? 1 : -1;
+  const walkers = g.pedestrians && Array.isArray(g.pedestrians.walkers) ? g.pedestrians.walkers : [];
+  const wSpots = [6, 11, 17, 23, 29, 35];
+  for (let i = 0; i < Math.min(6, walkers.length); i += 1) {
+    const w = walkers[i];
+    if (!w || !w.pos) continue;
+    const x = p.x + fx * wSpots[i] + rx * side * 5.5;
+    const z = p.z + fz * wSpots[i] + rz * side * 5.5;
+    w.pos.x = x;
+    w.pos.z = z;
+    w.heading = h;
+    try {
+      if (w.mesh) {
+        w.mesh.position.set(x, 0, z);
+        w.mesh.rotation.y = w.heading;
+      }
+    } catch {
+    }
+  }
+  const cars = g.traffic && Array.isArray(g.traffic.cars) ? g.traffic.cars : [];
+  const cSpots = [[34, -3.2], [42, 3.2]];
+  for (let i = 0; i < Math.min(2, cars.length); i += 1) {
+    const c = cars[i];
+    if (!c || !c.pos) continue;
+    const s = cSpots[i % cSpots.length];
+    const x = p.x + fx * s[0] + rx * s[1];
+    const z = p.z + fz * s[0] + rz * s[1];
+    c.pos.x = x;
+    c.pos.z = z;
+    c.heading = h + Math.PI;
+    c.speed = 0;
+    try {
+      if (c.mesh) {
+        c.mesh.position.set(x, 0, z);
+        c.mesh.rotation.y = c.heading;
+      }
+    } catch {
+    }
+  }
+  // Singkirkan NPC liar dari zona kamera: pejalan kaki/mobil NPC yang
+  // kebetulan berada <12/<15 unit dari pemain bisa menutupi lensa (di shot
+  // end cp5 satu walker acak mendarat 4 unit di depan kamera). Pindah jauh
+  // ke depan, sisi seberang, supaya tetap ada di dunia tapi tidak memblokir.
+  for (let i = 6; i < walkers.length; i += 1) {
+    const w = walkers[i];
+    if (!w || !w.pos) continue;
+    if (Math.hypot(w.pos.x - p.x, w.pos.z - p.z) >= 12) continue;
+    const fwd = 48 + (i % 3) * 8;
+    const x = p.x + fx * fwd + rx * -side * 5.5;
+    const z = p.z + fz * fwd + rz * -side * 5.5;
+    w.pos.x = x;
+    w.pos.z = z;
+    w.heading = h;
+    try {
+      if (w.mesh) {
+        w.mesh.position.set(x, 0, z);
+        w.mesh.rotation.y = w.heading;
+      }
+    } catch {
+    }
+  }
+  for (let i = 2; i < cars.length; i += 1) {
+    const c = cars[i];
+    if (!c || !c.pos) continue;
+    if (Math.hypot(c.pos.x - p.x, c.pos.z - p.z) >= 15) continue;
+    const fwd = 52 + (i % 3) * 8;
+    const x = p.x + fx * fwd + rx * -side * 3.2;
+    const z = p.z + fz * fwd + rz * -side * 3.2;
+    c.pos.x = x;
+    c.pos.z = z;
+    c.heading = h + Math.PI;
+    c.speed = 0;
+    try {
+      if (c.mesh) {
+        c.mesh.position.set(x, 0, z);
+        c.mesh.rotation.y = c.heading;
+      }
+    } catch {
+    }
+  }
+}
+
 function startFirstMission(game) {
   const missions = game.missions;
   if (!missions || !isFn(missions.startMission)) return;
@@ -309,7 +422,7 @@ function startFirstMission(game) {
   try {
     if (Array.isArray(missions.list) && missions.list.length > 0) {
       const first = missions.list[0];
-      if (first && first.id !== undefined) tries.unshift(first.id);
+      if (first && first.index !== undefined) tries.unshift(first.index);
     }
   } catch {
   }
@@ -425,6 +538,7 @@ export function stageShot(name, game) {
       advanceSim(g, 1);
     }
     framePursuitUnits(g, 2);
+    stageCrowd(g);
     if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
     frameChaseCamera(g);
     pushHudState(g);
@@ -445,6 +559,7 @@ export function stageShot(name, game) {
     const vehicle = findOrSpawnVehicle(g, node);
     enterVehicle(g, vehicle);
     setVehicleHeading(vehicle, head);
+    brightenNightCar(vehicle);
     setWanted(g, 5);
     spawnPursuit(g, 4);
     advanceSim(g, SIM_SECONDS);
@@ -453,6 +568,7 @@ export function stageShot(name, game) {
       advanceSim(g, 1);
     }
     framePursuitUnits(g, 4);
+    stageCrowd(g);
     if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
     frameChaseCamera(g);
     pushHudState(g);

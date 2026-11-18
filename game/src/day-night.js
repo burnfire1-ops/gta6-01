@@ -1,8 +1,3 @@
-// Day/night cycle for
-// sun (intensity ~2.5) +
-// (pastel blue day, orang
-// flagged userData.glow
-// up and the rotating
 
 import * as THREE from 'three';
 import { DAY_LENGTH_SECONDS, PALETTE } from './config.js';
@@ -30,7 +25,6 @@ function skyColorAt(hour) {
 }
 
 function nightFactorAt(hour) {
-  // 0 in full day (08:00-
   if (hour >= 19.5 || hour < 5) return 1;
   if (hour >= 8 && hour <= 16.5) return 0;
   if (hour > 16.5 && hour < 19.5) return (hour - 16.5) / 3;
@@ -58,7 +52,6 @@ export function createDayNight(scene) {
   const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x8a7a5a, 0.75);
   scene.add(hemi);
 
-  // Collect every emissiv
   const glowMats = new Set();
   const beams = [];
   scene.traverse((obj) => {
@@ -78,7 +71,6 @@ export function createDayNight(scene) {
     const az = Math.PI * (1 - dayFrac); // e
     const night = nightFactorAt(hour);
     if (night >= 1) {
-      // Moonlight: same d
       sun.intensity = 0.35;
       sun.color.setHex(0x8fa8d8);
       sun.position.set(-60, 140, -80);

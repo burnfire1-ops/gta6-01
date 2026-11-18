@@ -1,9 +1,4 @@
-// pedestrians.js — Pejala
-// 16 warga di trotoar
-// melihat kejahatan (jara
 // jeda lapor 2 detik,
-// cooldown 10 detik per
-// di pos": walker radius
 import * as THREE from 'three';
 
 const SHIRT_COLORS = [0xe8b4b8, 0x8fb8d8, 0xd8c98f, 0x9fd8a8, 0xc9a0d8, 0xd8d8d8, 0xe07856, 0x5a7a9a];
@@ -55,7 +50,6 @@ export function createPedestrians(scene, graph, rng) {
       base = graph.nodes[Math.floor(rand() * graph.nodes.length)];
     }
     if (!base) return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
-    // Trotoar: titik jala
     const a = rand() * Math.PI * 2;
     return { x: base.x + Math.cos(a) * 5, z: base.z + Math.sin(a) * 5 };
   }
@@ -85,7 +79,7 @@ export function createPedestrians(scene, graph, rng) {
     return w;
   }
 
-  for (let i = 0; i < 16; i++) walkers.push(makeWalker());
+  for (let i = 0; i < 24; i++) walkers.push(makeWalker());
 
   /** Logika saksi + panik untuk satu kejahatan di pos. Dipakai reportCrime()
    *  dan oleh update() bila ctx.crime diset main (pos + t unik). */
@@ -95,13 +89,11 @@ export function createPedestrians(scene, graph, rng) {
     for (const w of walkers) {
       const d = Math.hypot(w.pos.x - pos.x, w.pos.z - pos.z);
       if (d < 20) {
-        // Panik: lari men
         w.state = 'panic';
         w.panicTimer = 3;
         w.threatPos = { x: pos.x, z: pos.z };
       }
       if (d < 25 && w.reportCooldown <= 0 && w.reportedSeq !== crimeSeq) {
-        // Saksi: harus me
         const dx = pos.x - w.pos.x;
         const dz = pos.z - w.pos.z;
         const facing = (Math.sin(w.heading) * dx + Math.cos(w.heading) * dz) / (d || 1);
@@ -126,7 +118,6 @@ export function createPedestrians(scene, graph, rng) {
       if (car.ejectedPedestrian && !car.ejectedPedestrian.consumed) {
         car.ejectedPedestrian.consumed = true;
         onCrimeSeen({ x: car.ejectedPedestrian.x, z: car.ejectedPedestrian.z });
-        // Pengemudi yang
         let best = null;
         let bestD = Infinity;
         for (const w of walkers) {
@@ -163,7 +154,6 @@ export function createPedestrians(scene, graph, rng) {
     if (ctx) lastCtx = ctx;
     const colliders = ctx && ctx.city ? ctx.city.colliders : null;
 
-    // Kejahatan baru dari
     if (ctx && ctx.crime && ctx.crime.pos) {
       const key = `${ctx.crime.t || 0}|${ctx.crime.pos.x},${ctx.crime.pos.z}`;
       if (update._lastCrimeKey !== key) {
@@ -173,7 +163,6 @@ export function createPedestrians(scene, graph, rng) {
     }
     collectEjectedDrivers(ctx);
 
-    // Selesaikan jeda lap
     for (let i = pendingReports.length - 1; i >= 0; i--) {
       const r = pendingReports[i];
       r.timer -= d;
@@ -194,7 +183,6 @@ export function createPedestrians(scene, graph, rng) {
     for (const w of walkers) {
       if (w.reportCooldown > 0) w.reportCooldown -= d;
 
-      // Panik: mobil di t
       if (w.state !== 'panic') {
         let threat = w.threatPos;
         for (const car of fleetCars || []) {
@@ -234,7 +222,6 @@ export function createPedestrians(scene, graph, rng) {
           w.avoidTarget = null;
         }
       } else { // walk
-        // Menghindar: mob
         let dodge = null;
         for (const car of fleetCars || []) {
           const dc = Math.hypot(car.pos.x - w.pos.x, car.pos.z - w.pos.z);
@@ -255,7 +242,6 @@ export function createPedestrians(scene, graph, rng) {
 
       w.mesh.position.set(w.pos.x, 0, w.pos.z);
       w.mesh.rotation.y = w.heading;
-      // Ayunan jalan sede
       w.mesh.position.y = w.speed > 0.1 ? Math.abs(Math.sin(Date.now() * 0.008 + w.pos.x)) * 0.05 : 0;
     }
     void colliders;

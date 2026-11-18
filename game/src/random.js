@@ -1,5 +1,3 @@
-// A small seeded random
-// which is what makes the
 
 export function createRandom(seed) {
   let a = seed | 0;

@@ -1,7 +1,4 @@
-// traffic.js — Lalu linta
-// 10 mobil NPC mengikuti
 // belakang mobil lain,
-// pengejaran polisi (want
 import { clamp, turnToward } from './vehicles.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
@@ -46,11 +43,10 @@ export function createTraffic(scene, graph, fleet, rng) {
     const destId = dest.id !== undefined ? dest.id : dest;
     car._t.route = planRoute(graph, fromId, destId);
     car._t.wp = 0;
-    // Lewati waypoint per
     if (car._t.route.length && String(car._t.route[0]) === String(fromId)) car._t.wp = 1;
   }
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 14; i++) {
     const type = NPC_TYPES[Math.floor(rand() * NPC_TYPES.length)];
     const car = fleet.spawnCar(type, randomNode(graph, rand));
     car.driver = 'npc';
@@ -102,7 +98,6 @@ export function createTraffic(scene, graph, fleet, rng) {
             ? graph.projectToRoad(car.pos.x, car.pos.z) : null;
           const cx = road ? road.x : car.pos.x;
           const cz = road ? road.z : car.pos.z;
-          // Tepi jalan: g
           const px = -Math.cos(car.heading);
           const pz = Math.sin(car.heading);
           t.pullTarget = { x: cx + px * 5.5, z: cz + pz * 5.5 };
@@ -155,7 +150,6 @@ export function createTraffic(scene, graph, fleet, rng) {
       if (carAhead(car)) wantSpeed = 0;
 
       // --- Anti-macet: t
-      // macet (jangan hit
       if (car.speed < 0.5 && !atRedLight) {
         t.blockedTimer += d;
         if (t.blockedTimer > 2) {

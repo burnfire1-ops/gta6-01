@@ -1,6 +1,3 @@
-// Every tuning number and
-// city on a road grid
-// depends on the screen
 
 export const SEED = 1337;
 
