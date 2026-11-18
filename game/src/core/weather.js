@@ -1,89 +1,119 @@
-// Weather state machine for Teluk Cahaya. Pure, no three.js.
-// Types: clear / cloudy / rain / fog. Starts clear; every 90-150 game
-// seconds a new type is picked by weight, never repeating the same type
-// twice in a row. Transitions blend over ~5 seconds. The renderer reads
-// the returned effective params (a single reused object, no allocation
-// per frame) and layers them on top of the clock.js day/night cycle.
-import { mulberry32 } from './rng.js';
+// Teluk Cahaya — weather + atmosphere (core sim, pure: no three.js).
+// A slow state machine cycles clear / cloudy / rain / fog and never
+// repeats the same condition twice in a row. Every visible effect lerps
+// toward its target, so the sky, fog and light glide between conditions
+// instead of jumping. renderer.js reads the returned effect object each
+// frame and applies it to the sky dome, fog, lights and rain.
 
-export const WEATHER_TYPES = ['clear', 'cloudy', 'rain', 'fog'];
+const CONDITIONS = ['clear', 'cloudy', 'rain', 'fog'];
 
-const WEIGHTS = { clear: 0.45, cloudy: 0.25, rain: 0.15, fog: 0.15 };
-const BLEND_TIME = 5; // seconds to crossfade between types
-
-// Per-type render params: sun/hemi intensity multipliers, fog range,
-// how much the sky desaturates toward grey, rain amount (0..1), and a
-// fog tint the fog colour blends toward (amt 0 = no tint).
-const PARAMS = {
-  clear:  { sun: 1.0,  hemi: 1.0,  fogNear: 220, fogFar: 720, desat: 0.0,  rain: 0, fogTint: [0.85, 0.88, 0.92], fogTintAmt: 0.0 },
-  cloudy: { sun: 0.7,  hemi: 0.7,  fogNear: 200, fogFar: 650, desat: 0.45, rain: 0, fogTint: [0.70, 0.72, 0.75], fogTintAmt: 0.25 },
-  rain:   { sun: 0.45, hemi: 0.45, fogNear: 150, fogFar: 500, desat: 0.6,  rain: 1, fogTint: [0.55, 0.58, 0.62], fogTintAmt: 0.35 },
-  fog:    { sun: 0.6,  hemi: 0.6,  fogNear: 120, fogFar: 350, desat: 0.5,  rain: 0, fogTint: [0.72, 0.75, 0.78], fogTintAmt: 0.6 },
+// Target effect values per condition. Fog ranges follow the renderer
+// contract: clear 220/720, rain 150/500, fog 120/350, cloudy in between.
+const TARGETS = {
+  clear: {
+    desat: 0.0, fogTintAmt: 0.0, fogTint: [1.0, 0.9, 0.72],
+    fogNear: 220, fogFar: 720, hemi: 1.0, sun: 1.0, rain: 0,
+  },
+  cloudy: {
+    desat: 0.28, fogTintAmt: 0.25, fogTint: [0.74, 0.78, 0.82],
+    fogNear: 180, fogFar: 600, hemi: 0.85, sun: 0.62, rain: 0,
+  },
+  rain: {
+    desat: 0.38, fogTintAmt: 0.42, fogTint: [0.58, 0.64, 0.72],
+    fogNear: 150, fogFar: 500, hemi: 0.7, sun: 0.45, rain: 0.9,
+  },
+  fog: {
+    desat: 0.5, fogTintAmt: 0.65, fogTint: [0.84, 0.87, 0.9],
+    fogNear: 120, fogFar: 350, hemi: 0.75, sun: 0.35, rain: 0,
+  },
 };
 
-function lerp(a, b, t) { return a + (b - a) * t; }
+const MIN_HOLD = 90;    // shortest time a condition lasts (seconds)
+const HOLD_SPAN = 60;   // ...plus up to this much, so 90..150 s total
+const BLEND_RATE = 0.22; // per-second exponential approach to the target
 
-export function createWeather(seed = 20261118) {
-  const rng = mulberry32(seed >>> 0);
-  const w = {
-    type: 'clear', // target type (what we are blending toward)
-    prev: 'clear', // type we are blending from
-    t: 0, // game seconds spent in the current type
-    duration: 90 + rng() * 60, // 90-150 s per type
-    blend: 1, // 0..1 crossfade progress (1 = fully settled)
-    rng,
-    // Effective (blended) params, reused every frame — updateWeather
-    // mutates and returns this same object, never allocates.
-    eff: {
-      type: 'clear', blend: 1,
-      sun: 1, hemi: 1, fogNear: 220, fogFar: 720,
-      desat: 0, rain: 0,
-      fogTint: [0.85, 0.88, 0.92], fogTintAmt: 0,
-    },
+// Tiny local rng (mulberry32) so this module needs no other import.
+function seedRng(seed) {
+  let a = (seed >>> 0) || 1;
+  return function next() {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  return w;
 }
 
-function pickNext(w) {
-  let next;
-  do {
-    const r = w.rng();
-    let acc = 0;
-    next = 'clear';
-    for (let i = 0; i < WEATHER_TYPES.length; i++) {
-      acc += WEIGHTS[WEATHER_TYPES[i]];
-      if (r < acc) { next = WEATHER_TYPES[i]; break; }
-    }
-  } while (next === w.type); // never repeat the same type twice in a row
+// Create the weather state. Starts clear so the first frames of a session
+// (and the cover shot) always open on a bright sky; the timer is seeded,
+// so later changes are deterministic for a given seed.
+export function createWeather(seed) {
+  const rand = seedRng(typeof seed === 'number' ? seed : 1);
+  const start = TARGETS.clear;
+  return {
+    seed: seed || 1,
+    condition: 'clear',
+    timer: MIN_HOLD + rand() * HOLD_SPAN,
+    desat: start.desat,
+    fogTintAmt: start.fogTintAmt,
+    fogTint: start.fogTint.slice(),
+    fogNear: start.fogNear,
+    fogFar: start.fogFar,
+    hemi: start.hemi,
+    sun: start.sun,
+    rain: start.rain,
+    _rand: rand,
+  };
+}
+
+// Pick a new condition that differs from the current one.
+function pickNext(weather) {
+  let next = weather.condition;
+  while (next === weather.condition) {
+    next = CONDITIONS[Math.floor(weather._rand() * CONDITIONS.length)];
+  }
   return next;
 }
 
-export function updateWeather(w, dt) {
-  if (dt > 0) w.t += dt;
-  if (w.blend < 1) w.blend = Math.min(1, w.blend + dt / BLEND_TIME);
-  if (w.t >= w.duration) {
-    w.prev = w.type;
-    w.type = pickNext(w);
-    w.t = 0;
-    w.duration = 90 + w.rng() * 60;
-    w.blend = 0;
+// Advance the state machine by dt seconds and return the current effect.
+// The returned object is freshly built each call; the fogTint array inside
+// it is the state's own (read-only for the caller).
+export function updateWeather(weather, dt) {
+  if (!weather) {
+    const c = TARGETS.clear;
+    return {
+      desat: c.desat, fogTintAmt: c.fogTintAmt, fogTint: c.fogTint.slice(),
+      fogNear: c.fogNear, fogFar: c.fogFar, hemi: c.hemi, sun: c.sun, rain: c.rain,
+    };
   }
-  // Smoothstep the blend so transitions ease in and out.
-  const b = w.blend * w.blend * (3 - 2 * w.blend);
-  const a = PARAMS[w.prev];
-  const c = PARAMS[w.type];
-  const e = w.eff;
-  e.type = w.type;
-  e.blend = w.blend;
-  e.sun = lerp(a.sun, c.sun, b);
-  e.hemi = lerp(a.hemi, c.hemi, b);
-  e.fogNear = lerp(a.fogNear, c.fogNear, b);
-  e.fogFar = lerp(a.fogFar, c.fogFar, b);
-  e.desat = lerp(a.desat, c.desat, b);
-  e.rain = lerp(a.rain, c.rain, b);
-  e.fogTint[0] = lerp(a.fogTint[0], c.fogTint[0], b);
-  e.fogTint[1] = lerp(a.fogTint[1], c.fogTint[1], b);
-  e.fogTint[2] = lerp(a.fogTint[2], c.fogTint[2], b);
-  e.fogTintAmt = lerp(a.fogTintAmt, c.fogTintAmt, b);
-  return e;
+  const step = Math.min(Math.max(dt || 0, 0), 0.1);
+  if (step > 0) {
+    weather.timer -= step;
+    if (weather.timer <= 0) {
+      weather.condition = pickNext(weather);
+      weather.timer = MIN_HOLD + weather._rand() * HOLD_SPAN;
+    }
+    // Smooth blend: exponential approach, same rate for every channel.
+    const k = 1 - Math.exp(-BLEND_RATE * step);
+    const t = TARGETS[weather.condition];
+    weather.desat += (t.desat - weather.desat) * k;
+    weather.fogTintAmt += (t.fogTintAmt - weather.fogTintAmt) * k;
+    for (let i = 0; i < 3; i++) {
+      weather.fogTint[i] += (t.fogTint[i] - weather.fogTint[i]) * k;
+    }
+    weather.fogNear += (t.fogNear - weather.fogNear) * k;
+    weather.fogFar += (t.fogFar - weather.fogFar) * k;
+    weather.hemi += (t.hemi - weather.hemi) * k;
+    weather.sun += (t.sun - weather.sun) * k;
+    weather.rain += (t.rain - weather.rain) * k;
+  }
+  return {
+    desat: weather.desat,
+    fogTintAmt: weather.fogTintAmt,
+    fogTint: weather.fogTint,
+    fogNear: weather.fogNear,
+    fogFar: weather.fogFar,
+    hemi: weather.hemi,
+    sun: weather.sun,
+    rain: weather.rain,
+  };
 }

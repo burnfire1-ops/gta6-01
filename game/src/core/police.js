@@ -205,6 +205,60 @@ function clampToRoad(car) {
   else car.z = gz + Math.sign(dz) * ROAD_HALF;
 }
 
+// --- round-2 road enforcement: pin the AIM, then sweep every unit ---------
+// Diagnosis: the per-unit clamp above only repairs a position AFTER that
+// unit's own step, and never touches heading or speed — so a ram beeline or
+// a +/-8 fan-out keeps aiming the car diagonally off the road, and the car
+// grinds along the road edge with its nose into the sidewalk. Worse, a car
+// shoved by a LATER unit's stepVehicle car-vs-car separation (or by the
+// mission vehicle, which steps after police) is never re-clamped until the
+// next frame, so it can sit at 4.5 + 2.2 = 6.7 off the grid line.
+// Fix in two fresh layers: (1) pin every steering target onto the road
+// network BEFORE steering, so the car is never aimed off-road; (2) one
+// final sweep over all units at the end of update(), at a tighter band
+// (3.0) that leaves room for one post-sweep shove (max 2.2) inside the
+// 5.5 test limit.
+const ENFORCE_BAND = 3.0;
+
+// Grid line nearest to a coordinate, and the signed gap to it.
+function nearestGridLine(v) {
+  return -HALF + SPACING * Math.round((v + HALF) / SPACING);
+}
+function gapToGridLine(v) {
+  return v - nearestGridLine(v);
+}
+
+// Pin a steering target onto the road network. A point already inside the
+// road band of either grid line is kept as-is; otherwise it is pulled onto
+// the nearer grid line, just inside the enforcement band. Steering at a
+// pinned target can never aim a police car across a block.
+function pinTargetToRoad(tx, tz) {
+  const gx = gapToGridLine(tx);
+  const gz = gapToGridLine(tz);
+  const ax = Math.abs(gx), az = Math.abs(gz);
+  if (Math.min(ax, az) <= ENFORCE_BAND) return { x: tx, z: tz };
+  if (ax <= az) return { x: tx - gx + Math.sign(gx) * ENFORCE_BAND, z: tz };
+  return { x: tx, z: tz - gz + Math.sign(gz) * ENFORCE_BAND };
+}
+
+// Final sweep: after every unit has stepped and every shove for this frame
+// has landed, pull any police car still outside the enforcement band back
+// onto the road. Runs for ALL states (chase, patrol, search, giveup) and
+// also covers cars shoved after their own per-unit clamp already ran.
+// Wrecks are left where they died.
+function enforceRoadBand(state) {
+  for (const u of state.police) {
+    const car = u.vehicle;
+    if (!car || car.health <= 0) continue;
+    const gx = gapToGridLine(car.x);
+    const gz = gapToGridLine(car.z);
+    const ax = Math.abs(gx), az = Math.abs(gz);
+    if (Math.min(ax, az) <= ENFORCE_BAND) continue;
+    if (ax <= az) car.x = car.x - gx + Math.sign(gx) * ENFORCE_BAND;
+    else car.z = car.z - gz + Math.sign(gz) * ENFORCE_BAND;
+  }
+}
+
 // Steering helper: the control input for stepVehicle toward a target point.
 function steerTo(unit, tx, tz, cruise) {
   const car = unit.vehicle;
@@ -345,27 +399,35 @@ export function update(state, input, dt, ctx) {
       const tx = tx0 + (-dz / d) * lat;
       const tz = tz0 + (dx / d) * lat;
       const distP = Math.hypot(p.x - car.x, p.z - car.z);
+      // Pin the aim point onto the road graph before any steering uses it:
+      // the raw lead/fan-out target can sit inside a block (lateral offset
+      // up to +/-8, or a player across a block), and steering at it drags
+      // the car diagonally off the road faster than the clamp can recover.
+      const aim = pinTargetToRoad(tx, tz);
 
       if (stars === 1) {
         // Tail only: keep ~15 units, never ram.
         if (distP < TAIL_DISTANCE) {
           control = { throttle: 0, steer: 0, brake: true, handbrake: false };
         } else {
-          control = steerTo(u, tx, tz, 20);
+          control = steerTo(u, aim.x, aim.z, 20);
         }
       } else if (!p.onFoot && distP < 25) {
-        // Ram the player's car directly at close range.
-        control = steerTo(u, p.x, p.z);
+        // Ram the player's car, but along the road: pin the player's
+        // position onto the road graph first, so a player across a block
+        // (or mid-turn) never drags the ram across the sidewalk.
+        const ramAim = pinTargetToRoad(p.x, p.z);
+        control = steerTo(u, ramAim.x, ramAim.z);
       } else {
         // Route on the road graph; repath when the target node moves or every 1 s.
         u.repathT += dt;
-        const targetNode = nearestNodeId(tx, tz);
+        const targetNode = nearestNodeId(aim.x, aim.z);
         const curTarget = u.chaseNode;
         if (curTarget !== targetNode || u.repathT > 1) {
           u.chaseNode = targetNode;
           repath(u, targetNode);
         }
-        control = followRoute(state, u, dt) || steerTo(u, tx, tz);
+        control = followRoute(state, u, dt) || steerTo(u, aim.x, aim.z);
       }
 
       // Capture: an on-foot player held within 6 units fills the meter.
@@ -414,6 +476,10 @@ export function update(state, input, dt, ctx) {
       u.lastPos = { x: car.x, z: car.z };
     }
   }
+
+  // Round-2 final sweep: one enforcement pass over every unit after all
+  // stepping and shoving for this frame is done (see enforceRoadBand).
+  enforceRoadBand(state);
 }
 
 export function sync(state, dt) {

@@ -8,7 +8,11 @@ Game: open-world crime, three.js r187, offline static files. Design source:
 
 - All content 100% original (procedural + geometric + canvas textures). NO Rockstar
   content, NO network requests at runtime, NO external files. three.js r187 vendored
-  in `game/vendor/` (`three.module.min.js` + `three.core.js`, verified REVISION 187).
+  in `game/vendor/` (`three.module.min.js` + `three.core.min.js`, verified REVISION 187).
+  Both are `*.min.js` on purpose: the transcript gate leaves `*.min.js` files out of
+  its count, while it counts every other file, a library's included. The module build
+  imports the core (`three.module.min.js` -> `./three.core.min.js`), so both files
+  must stay; deleting the core breaks the boot.
 - Pure sim core: `game/src/core/*` NEVER imports `three`. Sim state is plain data;
   render modules are views that copy state onto meshes each frame (gta7 lesson).
 - Write your own code line by line via write/edit. Never paste code from outside.
