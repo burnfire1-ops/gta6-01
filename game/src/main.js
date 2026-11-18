@@ -112,6 +112,9 @@ const ctx = {
   input,
   cameraYaw: 0,
   interactPressed: false,
+  toast: (m) => hud.toast(m),
+  get money() { return game.state.money; },
+  set money(v) { game.state.money = v; },
   get timeHours() {
     return dayNight.timeHours;
   },

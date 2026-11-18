@@ -309,9 +309,13 @@ export function createPolice(scene, graph, fleet, rng) {
 
   function busted(ctx) {
     const player = ctx && ctx.player;
-    if (ctx && typeof ctx.money === 'number') ctx.money -= 100;
+    const cap = (CFG.MISSIONS && typeof CFG.MISSIONS.fineOnCaught === 'number')
+      ? CFG.MISSIONS.fineOnCaught : 100;
+    const have = (ctx && typeof ctx.money === 'number') ? ctx.money : 0;
+    const fine = Math.max(0, Math.min(have, cap));
+    if (ctx && typeof ctx.money === 'number') ctx.money -= fine;
     if (ctx && typeof ctx.toast === 'function') {
-      ctx.toast('Tertangkap polisi! Denda Rp 100. Dibawa ke kantor polisi Boulevard.');
+      ctx.toast(`Tertangkap polisi! Denda Rp ${fine}. Dibawa ke kantor polisi Boulevard.`);
     }
     const st = policeStationNode();
     if (player) {

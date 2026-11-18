@@ -22,25 +22,20 @@ export function createPlayer(scene, graph, rng) {
   const group = new THREE.Group();
   group.name = 'player-raka';
 
-  const shirt = 0x2ec4b6; // t
+  const shirt = 0xffb703; // j
   const skin = 0xc98d64;
   const pants = 0x2c3444;
 
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.42, 0.7, 4, 8),
-    new THREE.MeshStandardMaterial({ color: shirt, roughness: 0.9, flatShading: true }),
-  );
-  body.position.y = 1.05;
-  body.castShadow = true;
+  const body = bodyPart(0.55, 0.7, 0.3, shirt, 0, 1.15, 0);
   group.add(body);
 
-  const head = bodyPart(0.5, 0.45, 0.45, skin, 0, 1.85, 0);
+  const head = bodyPart(0.4, 0.4, 0.4, skin, 0, 1.7, 0);
   group.add(head);
-  const cap = bodyPart(0.54, 0.16, 0.5, 0xffd166, 0, 2.1, 0);
+  const cap = bodyPart(0.46, 0.08, 0.46, pants, 0, 1.94, 0);
   group.add(cap);
 
-  const armL = bodyPart(0.18, 0.75, 0.18, skin, -0.55, 1.15, 0);
-  const armR = bodyPart(0.18, 0.75, 0.18, skin, 0.55, 1.15, 0);
+  const armL = bodyPart(0.16, 0.65, 0.16, skin, -0.36, 1.15, 0);
+  const armR = bodyPart(0.16, 0.65, 0.16, skin, 0.36, 1.15, 0);
   armL.geometry.translate(0, -0.28, 0);
   armR.geometry.translate(0, -0.28, 0);
   armL.position.y = 1.45;
@@ -204,7 +199,7 @@ export function createPlayer(scene, graph, rng) {
       armR.rotation.x = -1.6 * Math.max(0, state._attackT / 0.25);
     }
     // Idle breathing.
-    body.position.y = 1.05 + (moving ? Math.abs(Math.sin(state._walkPhase)) * 0.05 : Math.sin(performance.now() * 0.002) * 0.015);
+    body.position.y = 1.15 + (moving ? Math.abs(Math.sin(state._walkPhase)) * 0.05 : Math.sin(performance.now() * 0.002) * 0.015);
 
     group.position.set(state.pos.x, state._y, state.pos.z);
     group.rotation.y = state.heading;
