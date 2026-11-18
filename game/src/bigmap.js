@@ -1,4 +1,3 @@
-// Peta besar (M): x -300..220, z -220..220.
 const S = 600/520;
 const OX = 20;
 const OY = 66;

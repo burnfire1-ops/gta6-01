@@ -13,7 +13,6 @@ function canvasTexture(w, h, draw) {
   return tex;
 }
 
-/** Facade: flat pastel wall with a grid of lit/unlit windows (deterministic per seed). */
 function win(g, c, r, cols, rows, w, h) {
   g.fillRect(10 + c * ((w - 20) / cols) + 3, 18 + r * ((h - 30) / rows) + 3,
     (w - 20) / cols - 6, (h - 30) / rows - 8);
@@ -157,7 +156,7 @@ export function buildCity(scene, graph, rng) {
         const h = d.hMin + rng() * (d.hMax - d.hMin);
         const x = bx + ox;
         const z = bz + oz;
-        if (Math.abs(x) < 26 && Math.abs(z) < 26) continue; // keep the central plaza open
+        if (Math.abs(x) < 26 && Math.abs(z) < 26) continue;
         const mesh = new THREE.Mesh(boxGeo, d.mat);
         mesh.scale.set(w, h, dep);
         mesh.position.set(x, h / 2, z);

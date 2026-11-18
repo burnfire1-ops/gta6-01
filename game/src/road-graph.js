@@ -42,7 +42,6 @@ export function createRoadGraph() {
   }
 
   const edges = [];
-  // Grid nodes.
   for (let iz = 0; iz < n; iz += 1) {
     for (let ix = 0; ix < n; ix += 1) {
       addNode(nodeId(ix, iz), coords[ix], coords[iz]);
@@ -60,8 +59,12 @@ export function createRoadGraph() {
   const stIx = coords.indexOf(-20);
   const stNode = stIx >= 0 ? nodeById.get(nodeId(stIx, stIx)) : null;
   if (stNode) stNode.policeStation = true;
+  // Safehouse Boulevard Art-Deco: node (-100,-100), pola sama seperti kantor polisi.
+  const shIx = coords.indexOf(-100);
+  const shNode = shIx >= 0 ? nodeById.get(nodeId(shIx, shIx)) : null;
+  if (shNode) shNode.safehouse = true;
 
-  const bridgeStart = nodeId(0, 8); // (-220
+  const bridgeStart = nodeId(0, 8);
   const b0 = 2000;
   const b1 = 2001;
   addNode(b0, -260, 120);
@@ -176,7 +179,6 @@ export function createRoadGraph() {
     return nodes[Math.floor(rng() * nodes.length)];
   }
 
-  /** Traffic lights cycle 30 s (18 s green, 12 s red), offset per intersection. */
   function trafficLightState(nodeIdValue, timeHours) {
     const seconds = timeHours * 3600;
     const phase = (seconds + (nodeIdValue % 97) * 7) % 30;

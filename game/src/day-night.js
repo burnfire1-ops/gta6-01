@@ -58,14 +58,14 @@ export function createDayNight(scene) {
     if (obj.userData && obj.userData.spinBeam) beams.push(obj);
   });
 
-  let timeHours = 9; // ci
+  let timeHours = 9;
 
   function apply(hour) {
     const sky = skyColorAt(hour);
     scene.background.copy(sky);
     const dayFrac = THREE.MathUtils.clamp((hour - 6) / 12, 0, 1);
-    const el = Math.sin(dayFrac * Math.PI); // 0 at dawn/dusk, 1 at noon
-    const az = Math.PI * (1 - dayFrac); // e
+    const el = Math.sin(dayFrac * Math.PI);
+    const az = Math.PI * (1 - dayFrac);
     const night = nightFactorAt(hour);
     if (night >= 1) {
       sun.intensity = 0.35;

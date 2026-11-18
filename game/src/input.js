@@ -78,7 +78,7 @@ export function createInput(canvas) {
   }
 
   return {
-    /** Steering axes from WASD / arrows: forward +1 (W), strafe +1 (D). */
+
     axes: {
       get forward() {
         return (anyDown(FORWARD_KEYS) ? 1 : 0) - (anyDown(BACK_KEYS) ? 1 : 0);
@@ -100,7 +100,7 @@ export function createInput(canvas) {
       mouseDX = 0;
       mouseDY = 0;
     },
-    /** One-shot presses since the last call, as ACTION_* flags (consumed once). */
+
     takeActions() {
       const taken = actions;
       actions = 0;

@@ -181,12 +181,12 @@ export function createAudio() {
     if (on && !sirenOsc) {
       sirenOsc = ctx.createOscillator();
       sirenOsc.type = 'triangle';
-      sirenOsc.frequency.value = 825; // ten
+      sirenOsc.frequency.value = 825;
       sirenLfo = ctx.createOscillator();
       sirenLfo.type = 'sine';
-      sirenLfo.frequency.value = 0.6; // ~1
+      sirenLfo.frequency.value = 0.6;
       sirenLfoGain = ctx.createGain();
-      sirenLfoGain.gain.value = 125; // 825
+      sirenLfoGain.gain.value = 125;
       sirenLfo.connect(sirenLfoGain);
       sirenLfoGain.connect(sirenOsc.frequency);
       sirenGain = ctx.createGain();

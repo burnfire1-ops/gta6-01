@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import { CITY } from './config.js';
 
-// Paket Tersembunyi (tesis §4.3): side activity free-roam — 8 paket emas di
-// 4 distrik (2/distrik), posisi deterministik dari seed via rng yang di-pass.
-// Dikumpul jalan kaki dalam radius 2,5 unit, +Rp 150 per paket.
 const TOTAL = 8;
 const REWARD = 150;
 const RADIUS = 2.5;
@@ -41,8 +38,6 @@ export function createPackages(scene, graph, rng) {
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.6),
       new THREE.MeshStandardMaterial({ color: 0xf2c94c, emissive: 0xffc400, emissiveIntensity: 1.4 }));
     box.position.y = 0.5;
-    // Beam vertikal ala beacon misi tapi lebih kecil; MeshBasicMaterial tanpa
-    // point light per paket (hemat perf) tapi tetap terlihat.
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 5, 12, 1, true),
       new THREE.MeshBasicMaterial({ color: 0xf2c94c, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
     beam.position.y = 2.5;

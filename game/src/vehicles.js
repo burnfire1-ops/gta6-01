@@ -5,8 +5,8 @@ const FALLBACK_TYPES = {
   taxi:   { maxSpeed: 24, accel: 13, color: 0xf2c94c },
   van:    { maxSpeed: 20, accel: 10, color: 0x7a8a99 },
   pickup: { maxSpeed: 24, accel: 12, color: 0xb0563a },
-  sport:  { maxSpeed: 38, accel: 22, color: 0x14b8a6 }, // mobil hero pemain (teal)
-  police: { maxSpeed: 35, accel: 20, color: 0x14181d }, // 38 * 0.92: kabur selalu mungkin
+  sport:  { maxSpeed: 38, accel: 22, color: 0x14b8a6 },
+  police: { maxSpeed: 35, accel: 20, color: 0x14181d },
 };
 
 function typeSpec(type) {
@@ -15,7 +15,6 @@ function typeSpec(type) {
 
 export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
-/** Putar heading menuju target dengan laju maksimum (rad/detik), jalur terpendek. */
 export function turnToward(heading, target, maxStep) {
   let d = target - heading;
   while (d > Math.PI) d -= Math.PI * 2;
@@ -23,7 +22,6 @@ export function turnToward(heading, target, maxStep) {
   return heading + clamp(d, -maxStep, maxStep);
 }
 
-/** Normalisasi input mengemudi dari berbagai bentuk (boolean / throttle-steer / keys). */
 export function normalizeDriveInput(input) {
   const out = { throttle: 0, steer: 0, handbrake: false };
   if (!input || typeof input !== 'object') return out;
@@ -135,8 +133,6 @@ function syncMesh(car) {
   car.mesh.rotation.y = car.heading;
 }
 
-/** Fisika arcade: akselerasi/rem/mundur, steering proporsional kecepatan,
- *  handbrake (Space) = drift, tabrakan gedung, clamp di dalam kota. */
 export function driveVehicle(car, input, dt, ctx) {
   const inp = normalizeDriveInput(input);
   const p = car.pos;
@@ -148,8 +144,8 @@ export function driveVehicle(car, input, dt, ctx) {
   if (inp.throttle > 0) {
     car.speed += car.accel * inp.throttle * dt;
   } else if (inp.throttle < 0) {
-    if (car.speed > 0.5) car.speed -= car.accel * 1.6 * dt; // rem
-    else car.speed -= car.accel * 0.7 * dt; // mundur
+    if (car.speed > 0.5) car.speed -= car.accel * 1.6 * dt;
+    else car.speed -= car.accel * 0.7 * dt;
   }
   car.speed -= car.speed * (inp.handbrake ? 1.4 : 0.35) * dt;
   if (Math.abs(car.speed) < 0.05 && inp.throttle === 0) car.speed = 0;
@@ -191,8 +187,6 @@ export function driveVehicle(car, input, dt, ctx) {
   return car;
 }
 
-/** Curi mobil: keluarkan pengemudi NPC (ditandai agar pedestrians memanikkan),
- *  pemain masuk; mobil terkunci yang dicuri di depan saksi/polisi -> wanted +1. */
 export function stealCar(car, player, ctx) {
   if (!car || !player) return false;
   const p = car.pos;
@@ -298,7 +292,7 @@ export function createVehicleFleet(scene, graph, rng) {
     const base = resolvePos();
     const a = rand() * Math.PI * 2;
     const car = spawnCar(t, { x: base.x + Math.cos(a) * 5, z: base.z + Math.sin(a) * 5 });
-    car.locked = t !== 'sport' && rand() < 0.25; // ~25% mobil biasa terkunci
+    car.locked = t !== 'sport' && rand() < 0.25;
   }
 
   function update(dt, ctx) {

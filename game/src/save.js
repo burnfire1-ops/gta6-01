@@ -21,7 +21,7 @@ function storage() {
 
 function migrate(data) {
   const v = typeof data.version === 'number' ? Math.floor(data.version) : 1;
-  if (v > SAVE_VERSION) return null; // save
+  if (v > SAVE_VERSION) return null;
   data.version = SAVE_VERSION;
   return data;
 }
@@ -44,7 +44,7 @@ function tryParse(raw) {
   try {
     return validate(JSON.parse(raw));
   } catch {
-    return null; // JSON r
+    return null;
   }
 }
 

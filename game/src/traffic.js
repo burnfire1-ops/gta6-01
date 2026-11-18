@@ -19,7 +19,7 @@ function planRoute(graph, fromId, toId) {
     try {
       const path = graph.findPathAStar(fromId, toId);
       if (Array.isArray(path) && path.length) return path;
-    } catch (e) { /* jatuh ke rute langsung */ }
+    } catch (e) {  }
   }
   return [fromId, toId].filter((v, i, a) => a.indexOf(v) === i);
 }
@@ -50,8 +50,8 @@ export function createTraffic(scene, graph, fleet, rng) {
     car.driver = 'npc';
     car._t = {
       route: [], wp: 0,
-      cruise: 8 + rand() * 4, // 8-1
-      state: 'route', // '
+      cruise: 8 + rand() * 4,
+      state: 'route',
       blockedTimer: 0,
       pullTarget: null,
       repathTimer: 0,
@@ -60,7 +60,6 @@ export function createTraffic(scene, graph, fleet, rng) {
     cars.push(car);
   }
 
-  /** Mobil lain tepat di depan (kerucut depan, < 8 unit) -> rem. */
   function carAhead(car) {
     const fx = Math.sin(car.heading);
     const fz = Math.cos(car.heading);
@@ -138,7 +137,7 @@ export function createTraffic(scene, graph, fleet, rng) {
             atRedLight = true;
             wantSpeed = dist < 7 ? 0 : Math.max(0, t.cruise * (dist - 7) / 7);
           }
-        } catch (e) { /* lampu tidak tersedia -> jalan terus */ }
+        } catch (e) {  }
       }
       if (carAhead(car)) wantSpeed = 0;
 

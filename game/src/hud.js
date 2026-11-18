@@ -5,7 +5,6 @@ const MAX_WANTED = 5;
 
 const MINIMAP_RANGE = 140;
 
-/** Nilai pertama yang bukan null/undefined (alias rantai `??`). */
 function pick(...vals) {
   for (const v of vals) if (v !== undefined && v !== null) return v;
   return undefined;
@@ -456,7 +455,7 @@ export function createHud() {
   function toast(msg) {
     if (!el.toastEl || typeof msg !== 'string' || !msg) return;
     el.toastEl.textContent = msg;
-    el.toastEl.style.display = 'block'; // C
+    el.toastEl.style.display = 'block';
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       el.toastEl.style.display = 'none';

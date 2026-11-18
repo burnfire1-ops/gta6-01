@@ -12,7 +12,6 @@ export function part(w, h, d, mat, x, y, z) {
   return m;
 }
 
-/** Rig pejalan kaki: humanoid kotak, gaya sama dengan rig pemain. */
 export function buildWalkerMesh(color) {
   const g = new THREE.Group();
   const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
@@ -66,8 +65,8 @@ export function createPedestrians(scene, graph, rng) {
       pos: { x: start.x, z: start.z },
       heading: rand() * Math.PI * 2,
       speed: 0,
-      walkSpeed: 1.2 + rand() * 0.6, // 1.2-1.8
-      state: 'walk', // 'w
+      walkSpeed: 1.2 + rand() * 0.6,
+      state: 'walk',
       target: randomPoi(),
       idleTimer: 0,
       panicTimer: 0,
@@ -84,8 +83,6 @@ export function createPedestrians(scene, graph, rng) {
 
   for (let i = 0; i < 24; i++) walkers.push(makeWalker());
 
-  /** Logika saksi + panik untuk satu kejahatan di pos. Dipakai reportCrime()
-   *  dan oleh update() bila ctx.crime diset main (pos + t unik). */
   function onCrimeSeen(pos) {
     crimeSeq++;
     const colliders = lastCtx && lastCtx.city ? lastCtx.city.colliders : null;
@@ -108,13 +105,11 @@ export function createPedestrians(scene, graph, rng) {
     }
   }
 
-  /** Kejahatan terjadi di pos: walker radius 20 panik, saksi radius 25 mulai lapor. */
   function reportCrime(pos) {
     if (!pos) return;
     onCrimeSeen(pos);
   }
 
-  /** Ambil penanda pengemudi yang dikeluarkan saat mobil dicuri (vehicles.js). */
   function collectEjectedDrivers(ctx) {
     if (!ctx || !ctx.vehicles || !Array.isArray(ctx.vehicles.cars)) return;
     for (const car of ctx.vehicles.cars) {
@@ -223,7 +218,7 @@ export function createPedestrians(scene, graph, rng) {
           w.state = 'walk';
           w.avoidTarget = null;
         }
-      } else { // walk
+      } else {
         let dodge = null;
         for (const car of fleetCars || []) {
           const dc = Math.hypot(car.pos.x - w.pos.x, car.pos.z - w.pos.z);
@@ -238,7 +233,7 @@ export function createPedestrians(scene, graph, rng) {
           w.avoidTarget = dodge;
         } else if (stepToward(w, w.target, w.walkSpeed, d)) {
           w.state = 'idle';
-          w.idleTimer = 2 + rand() * 3; // berhenti melihat 2-5 detik
+          w.idleTimer = 2 + rand() * 3;
         }
       }
 

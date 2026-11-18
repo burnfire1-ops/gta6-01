@@ -51,6 +51,7 @@ const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerH
 camera.position.set(0, 6, -12);
 
 const graph = createRoadGraph();
+const SAFEHOUSE = graph.nodes.find((n) => n.safehouse) || { x: -100, z: -100 };
 const city = buildCity(scene, graph, rng);
 const dayNight = createDayNight(scene);
 const input = createInput(canvas);
@@ -64,8 +65,6 @@ const hud = createHud();
 const audio = createAudio();
 const saveSystem = createSaveSystem();
 // Satu ctx untuk semua subsistem.
-// missions DULU menerima objek lain tanpa money/toast/input/timeHours/scene,
-// getter baru dipanggil saat permainan jalan, setelah `game` ada.
 const ctx = {
   player,
   fleet,
@@ -103,6 +102,7 @@ const game = {
   graph,
   dayNight,
   hud,
+  safehouse: SAFEHOUSE,
   city,
   scene,
   camera,
@@ -234,6 +234,20 @@ function handleInteract() {
   }
 }
 
+let inSafe = false;
+function checkSafehouse() {
+  const inside = Math.hypot(player.pos.x - SAFEHOUSE.x, player.pos.z - SAFEHOUSE.z) <= 10;
+  if (!inside) { inSafe = false; return; }
+  if (inSafe) return;
+  inSafe = true;
+  saveSystem.save('auto', { money: game.state.money, health: player.health,
+    timeHours: dayNight.timeHours, mission: missions.active,
+    packages: packages.collectedIds(), pos: player.pos });
+  if (police.wanted > 0 && police.wanted < 3 && !police.units.some((u) => u.canSee)) {
+    police.clearWanted(); game.state.wanted = 0; hud.toast('Wanted bersih — safehouse');
+  } else if (police.wanted >= 3) hud.toast('Safehouse tidak bisa membersihkan wanted 3+');
+}
+
 function step(dt) {
   const actions = input.takeActions();
   input._actions = actions;
@@ -266,6 +280,7 @@ function step(dt) {
   traffic.update(dt, ctx);
   pedestrians.update(dt, ctx);
   police.update(dt, ctx);
+  checkSafehouse();
   missions.update(dt, ctx);
   packages.update(dt, ctx);
   dayNight.update(dt);
@@ -306,6 +321,7 @@ function step(dt) {
     playerHeading: player.heading,
     graph,
     police: police.units || [],
+    safehouse: SAFEHOUSE,
     missionMarker: missions.markerPos || null,
     packages: packages.markers(),
     packagesCount: packages.count(),

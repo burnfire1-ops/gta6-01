@@ -52,9 +52,6 @@ function setHeading(obj, radians) {
   }
 }
 
-// Heading mobil pemain: player.update MENIMPA heading pemain dengan
-// heading mobil saat mengemudi, jadi heading yang di-set di stageShot
-// hilang selama advanceSim bila hanya pemain yang di-set. Set keduanya.
 function setVehicleHeading(vehicle, radians) {
   if (!vehicle || typeof vehicle !== 'object') return;
   try {
@@ -281,8 +278,6 @@ function exitVehicle(game) {
   }
 }
 
-// Terangkan mobil pemain: malam (end) cat terang + emissive, siang (play)
-// cat terang tanpa emissive; lampu rem menyala di keduanya.
 function brightenCar(vehicle, night) {
   if (!vehicle || !vehicle.mesh || !isFn(vehicle.mesh.traverse)) return;
   vehicle.mesh.traverse((o) => {
@@ -303,12 +298,6 @@ function brightenCar(vehicle, night) {
   });
 }
 
-// Penuhi frame shot dengan NPC yang sudah ada (bukan sistem baru): pejalan
-// kaki di trotoar + mobil NPC di lajur berlawanan menghadap kamera.
-// Dipanggil SETELAH advanceSim supaya posisi staging tidak hanyut.
-// Titik as jalan SEARAH heading: di sudut peta nearestPointOnGraph bisa
-// jatuh ke jalan tegak lurus (pemain di (-220,-218) menempel edge utara-
-// selatan, padahal jalannya yang timur-barat di z=-220).
 function axisPointOnHeading(g, x, z, fx, fz) {
   const graph = g.graph;
   if (!graph || !Array.isArray(graph.edges) || !graph.nodeById) return null;
@@ -374,8 +363,6 @@ function stageCrowd(g) {
     placeAt(c, s[0], s[1], h + Math.PI);
     c.speed = 0;
   }
-  // Singkirkan NPC liar dari zona kamera (<12/<15 unit bisa menutupi lensa).
-  // Pindah jauh ke depan, sisi seberang, supaya tidak memblokir.
   for (let i = 6; i < walkers.length; i += 1) {
     const w = walkers[i];
     if (!w || !w.pos) continue;
