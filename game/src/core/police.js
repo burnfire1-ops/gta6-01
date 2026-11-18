@@ -6,7 +6,7 @@
 // player's sports car (32) — that number lives in vehicles.js. Genre: open-world-crime §1-§3.
 
 import { makeRng } from './rng.js';
-import { nodeCoords, nearestNodeId } from './city.js';
+import { nodeCoords, nearestNodeId, HALF, SPACING } from './city.js';
 import { spawnVehicle, stepVehicle, damageVehicle } from './vehicles.js';
 
 const SIGHT_RANGE = 60;      // police see the player inside this distance
@@ -186,6 +186,23 @@ function relocateOutOfView(state, unit) {
   }
   unit.stuckCount = 0;
   unit.stuckT = 0;
+}
+
+// Road clamp: police cars drive on roads. Steering (ram beelines, fan-out
+// targets, wide turns at speed), collision shoves and reverse arcs can all
+// push a unit off the road band; without a constraint it keeps driving
+// across the sidewalk (and through blocks) until the waypoint steering
+// slowly pulls it back. Pull the car back inside the road band (4.5 units
+// either side of the nearest grid line — the road itself is 5) after every
+// physics step, so a police car is never seen driving on the pavement.
+const ROAD_HALF = 4.5;
+function clampToRoad(car) {
+  const gx = -HALF + SPACING * Math.round((car.x + HALF) / SPACING);
+  const gz = -HALF + SPACING * Math.round((car.z + HALF) / SPACING);
+  const dx = car.x - gx, dz = car.z - gz;
+  if (Math.min(Math.abs(dx), Math.abs(dz)) <= ROAD_HALF) return;
+  if (Math.abs(dx) <= Math.abs(dz)) car.x = gx + Math.sign(dx) * ROAD_HALF;
+  else car.z = gz + Math.sign(dz) * ROAD_HALF;
 }
 
 // Steering helper: the control input for stepVehicle toward a target point.
@@ -374,7 +391,10 @@ export function update(state, input, dt, ctx) {
       }
     }
 
-    if (car && car.health > 0) stepVehicle(state, car, control, dt, cityRef);
+    if (car && car.health > 0) {
+      stepVehicle(state, car, control, dt, cityRef);
+      clampToRoad(car);
+    }
 
     // --- anti-stuck: <0.5 units in 2 s while trying to move -> repath once, then relocate ---
     u.stuckT += dt;
