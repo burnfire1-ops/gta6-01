@@ -139,6 +139,7 @@ function syncMesh(car) {
  *  handbrake (Space) = drift, tabrakan gedung, clamp di dalam kota. */
 export function driveVehicle(car, input, dt, ctx) {
   const inp = normalizeDriveInput(input);
+  const p = car.pos;
   const spec = typeSpec(car.type);
   const healthFactor = 0.55 + 0.45 * clamp(car.health / 100, 0, 1);
   const top = car.maxSpeed * healthFactor;
@@ -159,21 +160,22 @@ export function driveVehicle(car, input, dt, ctx) {
   const dir = car.speed >= 0 ? 1 : -1;
   car.heading += inp.steer * turnRate * dir * dt;
 
-  car.pos.x += Math.sin(car.heading) * car.speed * dt;
-  car.pos.z += Math.cos(car.heading) * car.speed * dt;
+  p.x += Math.sin(car.heading) * car.speed * dt;
+  p.z += Math.cos(car.heading) * car.speed * dt;
 
   const colliders = ctx && ctx.city && Array.isArray(ctx.city.colliders) ? ctx.city.colliders : null;
   if (colliders) {
     for (const c of colliders) {
-      const dx = car.pos.x - c.x;
-      const dz = car.pos.z - c.z;
-      const d = Math.hypot(dx, dz);
+      const dx = p.x - c.x;
+      const dz = p.z - c.z;
+      const d2 = dx * dx + dz * dz;
       const minD = c.r + 1.4;
-      if (d < minD && d > 0.0001) {
+      if (d2 < minD * minD && d2 > 1e-8) {
+        const d = Math.sqrt(d2);
         const nx = dx / d;
         const nz = dz / d;
-        car.pos.x = c.x + nx * minD;
-        car.pos.z = c.z + nz * minD;
+        p.x = c.x + nx * minD;
+        p.z = c.z + nz * minD;
         const impact = Math.abs(car.speed);
         car.speed *= 0.4;
         if (impact > 8) car.health = Math.max(0, car.health - Math.min(15, (impact - 8) * 1.2));
@@ -182,8 +184,8 @@ export function driveVehicle(car, input, dt, ctx) {
   }
 
   if (car._bounds) {
-    car.pos.x = clamp(car.pos.x, car._bounds.minX, car._bounds.maxX);
-    car.pos.z = clamp(car.pos.z, car._bounds.minZ, car._bounds.maxZ);
+    p.x = clamp(p.x, car._bounds.minX, car._bounds.maxX);
+    p.z = clamp(p.z, car._bounds.minZ, car._bounds.maxZ);
   }
   syncMesh(car);
   return car;
@@ -193,8 +195,9 @@ export function driveVehicle(car, input, dt, ctx) {
  *  pemain masuk; mobil terkunci yang dicuri di depan saksi/polisi -> wanted +1. */
 export function stealCar(car, player, ctx) {
   if (!car || !player) return false;
+  const p = car.pos;
   if (car.driver === 'npc') {
-    car.ejectedPedestrian = { x: car.pos.x + 2, z: car.pos.z + 2, panic: true, t: 0 };
+    car.ejectedPedestrian = { x: p.x + 2, z: p.z + 2, panic: true, t: 0 };
     car.driver = null;
   }
   const wasLocked = !!car.locked;
@@ -202,12 +205,12 @@ export function stealCar(car, player, ctx) {
   car.driver = 'player';
   player.currentCar = car;
   player.onFoot = false;
-  if (player.pos) { player.pos.x = car.pos.x; player.pos.z = car.pos.z; }
+  if (player.pos) { player.pos.x = p.x; player.pos.z = p.z; }
   if (wasLocked && ctx && ctx.police) {
     const seenByWalker = ctx.pedestrians && Array.isArray(ctx.pedestrians.walkers)
-      && ctx.pedestrians.walkers.some((w) => Math.hypot(w.pos.x - car.pos.x, w.pos.z - car.pos.z) < 25);
+      && ctx.pedestrians.walkers.some((w) => (w.pos.x - p.x) ** 2 + (w.pos.z - p.z) ** 2 < 625);
     const seenByPolice = Array.isArray(ctx.police.units)
-      && ctx.police.units.some((u) => u.car && Math.hypot(u.car.pos.x - car.pos.x, u.car.pos.z - car.pos.z) < 40);
+      && ctx.police.units.some((u) => u.car && (u.car.pos.x - p.x) ** 2 + (u.car.pos.z - p.z) ** 2 < 1600);
     if (seenByWalker || seenByPolice) ctx.police.addWanted(1);
     else if (ctx.toast) ctx.toast('Mobil terkunci berhasil dicuri tanpa saksi.');
   }
