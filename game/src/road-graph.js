@@ -62,11 +62,11 @@ export function createRoadGraph() {
   if (stNode) stNode.policeStation = true;
 
   const bridgeStart = nodeId(0, 8); // (-220
-  const b0 = 1000;
-  const b1 = 1001;
+  const b0 = 2000;
+  const b1 = 2001;
   addNode(b0, -260, 120);
   addNode(b1, -300, 120);
-  const linkNode = 1002;
+  const linkNode = 2002;
   addNode(linkNode, -220, 120);
   addEdge(bridgeStart, linkNode);
   addEdge(linkNode, b0);

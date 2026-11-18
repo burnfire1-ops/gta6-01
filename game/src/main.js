@@ -10,6 +10,7 @@ import {
   ACTION_CONFIRM,
   ACTION_INTERACT,
   ACTION_JUMP,
+  ACTION_MAP,
   ACTION_PAUSE,
   createInput,
 } from './input.js';
@@ -21,6 +22,7 @@ import { createPedestrians } from './pedestrians.js';
 import { createPolice } from './police-pursuit.js';
 import { createMissions } from './missions.js';
 import { createPackages } from './packages.js';
+import { createBigMap } from './bigmap.js';
 import { createHud } from './hud.js';
 import { createAudio } from './audio.js';
 import { createSaveSystem } from './save.js';
@@ -88,6 +90,7 @@ const ctx = {
 const missions = createMissions(ctx);
 ctx.missions = missions;
 const packages = createPackages(scene, graph, rng);
+const bigMap = createBigMap($('bigmap'));
 
 const game = {
   player,
@@ -123,8 +126,25 @@ function showScreen(name) {
   screen = name;
   const gameoverMenu = $('menu-gameover');
   if (gameoverMenu) gameoverMenu.style.display = name === 'gameover' ? 'flex' : 'none';
+  const mapMenu = $('menu-map');
+  if (mapMenu) {
+    mapMenu.style.display = name === 'map' ? 'flex' : 'none';
+    mapMenu.classList.toggle('open', name === 'map');
+  }
   if (name === 'play') hud.hideMenus();
   else hud.showMenu(name === 'title' ? 'title' : name === 'paused' ? 'pause' : 'none');
+}
+
+function drawMap() {
+  bigMap.draw({
+    graph,
+    playerPos: player.pos,
+    playerHeading: player.heading,
+    missionMarker: missions.markerPos || null,
+    packages: packages.markers(),
+    police: police.units || [],
+    wanted: game.state.wanted,
+  });
 }
 
 function startGame(fresh) {
@@ -167,12 +187,27 @@ function endGame(reason) {
 }
 
 function handleActions(actions) {
+  if (actions & ACTION_MAP) {
+    if (screen === 'play') {
+      showScreen('map');
+      drawMap();
+      announce('Peta Teluk Cahaya.');
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    } else if (screen === 'map') {
+      showScreen('play');
+      announce('Lanjut.');
+    }
+    return;
+  }
   if (actions & ACTION_PAUSE) {
     if (screen === 'play') {
       showScreen('paused');
       announce('Jeda.');
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     } else if (screen === 'paused') {
+      showScreen('play');
+      announce('Lanjut.');
+    } else if (screen === 'map') {
       showScreen('play');
       announce('Lanjut.');
     }
