@@ -24,6 +24,11 @@ function planRoute(graph, fromId, toId) {
   return [fromId, toId].filter((v, i, a) => a.indexOf(v) === i);
 }
 
+function advance(c, d) {
+  c.pos.x += Math.sin(c.heading) * c.speed * d;
+  c.pos.z += Math.cos(c.heading) * c.speed * d;
+}
+
 export function createTraffic(scene, graph, fleet, rng) {
   const rand = typeof rng === 'function' ? rng : Math.random;
   const cars = [];
@@ -108,8 +113,7 @@ export function createTraffic(scene, graph, fleet, rng) {
           if (dist > 0.8) {
             car.heading = turnToward(car.heading, Math.atan2(dx, dz), 2.5 * d);
             car.speed = Math.min(car.speed + 6 * d, 6);
-            car.pos.x += Math.sin(car.heading) * car.speed * d;
-            car.pos.z += Math.cos(car.heading) * car.speed * d;
+            advance(car, d);
           } else {
             car.speed = 0;
           }
@@ -152,8 +156,7 @@ export function createTraffic(scene, graph, fleet, rng) {
       car.speed += clamp(wantSpeed - car.speed, -14 * d, 8 * d);
       if (car.speed < 0.05) car.speed = 0;
       car.heading = turnToward(car.heading, Math.atan2(dx, dz), 2.2 * d);
-      car.pos.x += Math.sin(car.heading) * car.speed * d;
-      car.pos.z += Math.cos(car.heading) * car.speed * d;
+      advance(car, d);
     }
   }
 

@@ -31,8 +31,9 @@ const seedParam = Number.parseInt(params.get('seed') ?? '', 10);
 const seed = Number.isInteger(seedParam) ? seedParam : Math.floor(Math.random() * 4294967296);
 const rng = createRandom(seed || SEED);
 
-const canvas = document.getElementById('game');
-const status = document.getElementById('status');
+const $ = (id) => document.getElementById(id);
+const canvas = $('game');
+const status = $('status');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -117,7 +118,7 @@ let last = performance.now();
 
 function showScreen(name) {
   screen = name;
-  const gameoverMenu = document.getElementById('menu-gameover');
+  const gameoverMenu = $('menu-gameover');
   if (gameoverMenu) gameoverMenu.style.display = name === 'gameover' ? 'flex' : 'none';
   if (name === 'play') hud.hideMenus();
   else hud.showMenu(name === 'title' ? 'title' : name === 'paused' ? 'pause' : 'none');
@@ -148,7 +149,7 @@ function startGame(fresh) {
 function endGame(reason) {
   const fine = Math.min(game.state.money, MISSIONS.fineOnCaught);
   game.state.money -= fine;
-  const text = document.getElementById('gameover-text');
+  const text = $('gameover-text');
   if (text) {
     text.textContent = reason === 'caught'
       ? `Polisi menangkap Raka. Denda Rp ${fine.toLocaleString('id-ID')} — wanted bersih, mulai lagi dari kantor polisi.`
@@ -304,7 +305,7 @@ function runShot(name) {
 
 function runGame() {
   const bind = (id, fn) => {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (el) el.addEventListener('click', fn);
   };
   bind('btn-new', () => startGame(true));
@@ -324,7 +325,7 @@ function runGame() {
   bind('btn-quit2', () => showScreen('title'));
   bind('btn-restart', () => startGame(true));
 
-  const continueBtn = document.getElementById('btn-continue');
+  const continueBtn = $('btn-continue');
   if (continueBtn && !saveSystem.hasSave(1)) continueBtn.disabled = true;
 
   window.addEventListener('resize', () => {
