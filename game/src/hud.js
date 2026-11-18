@@ -68,6 +68,7 @@ export function createHud() {
     armorText: $('armor-text'),
     wantedStars: $('wanted-stars'),
     money: $('money'),
+    packagesCount: $('packages-count'),
     objectivePanel: $('objective-panel'),
     objectiveTitle: $('objective-title'),
     objectiveText: $('objective-text'),
@@ -98,6 +99,7 @@ export function createHud() {
     health: null,
     armor: null,
     money: null,
+    packagesCount: null,
     wanted: null,
     escaping: null,
     blinkPhase: null,
@@ -207,6 +209,18 @@ export function createHud() {
       mm.fill();
     }
 
+    if (Array.isArray(data.packages)) {
+      mm.fillStyle = '#f2c94c';
+      for (const pk of data.packages) {
+        const p = normPoint(pk);
+        if (p && inView(p.x, p.z)) {
+          mm.beginPath();
+          mm.arc(toX(p.x), toY(p.z), 3, 0, Math.PI * 2);
+          mm.fill();
+        }
+      }
+    }
+
     if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
       mm.fillStyle = '#4f8ef7';
       for (const u of data.policeUnits) {
@@ -265,6 +279,7 @@ export function createHud() {
       health: pick(raw.playerHealth, raw.health),
       armor: raw.armor,
       money: raw.money,
+      packagesCount: raw.packagesCount,
       wanted,
       escaping: !!escaping,
       missionTitle:
@@ -286,6 +301,7 @@ export function createHud() {
         policeUnits,
         missionMarker: pick(mm.missionMarker, raw.missionMarker),
         safehouse: pick(mm.safehouse, raw.safehouse),
+        packages: pick(mm.packages, raw.packages),
       },
     };
   }
@@ -315,6 +331,11 @@ export function createHud() {
         void el.money.offsetWidth;
         el.money.classList.add('flash');
       }
+    }
+
+    if (typeof state.packagesCount === 'number' && state.packagesCount !== last.packagesCount) {
+      last.packagesCount = state.packagesCount;
+      if (el.packagesCount) el.packagesCount.textContent = `Paket ${state.packagesCount}/8`;
     }
 
     {
@@ -394,6 +415,7 @@ export function createHud() {
         policeUnits: state.minimap.policeUnits,
         missionMarker: state.minimap.missionMarker,
         safehouse: state.minimap.safehouse,
+        packages: state.minimap.packages,
         wanted: state.wanted || 0,
       });
     }

@@ -20,6 +20,7 @@ import { createTraffic } from './traffic.js';
 import { createPedestrians } from './pedestrians.js';
 import { createPolice } from './police-pursuit.js';
 import { createMissions } from './missions.js';
+import { createPackages } from './packages.js';
 import { createHud } from './hud.js';
 import { createAudio } from './audio.js';
 import { createSaveSystem } from './save.js';
@@ -86,6 +87,7 @@ const ctx = {
 };
 const missions = createMissions(ctx);
 ctx.missions = missions;
+const packages = createPackages(scene, graph, rng);
 
 const game = {
   player,
@@ -94,6 +96,7 @@ const game = {
   traffic,
   pedestrians,
   missions,
+  packages,
   graph,
   dayNight,
   hud,
@@ -131,6 +134,7 @@ function startGame(fresh) {
     player.armor = 0;
     if (missions.reset) missions.reset();
     if (police.reset) police.reset();
+    packages.reset();
   } else {
     const saved = saveSystem.load(1);
     if (saved) {
@@ -138,6 +142,7 @@ function startGame(fresh) {
       if (typeof saved.health === 'number') player.health = saved.health;
       if (typeof saved.timeHours === 'number') dayNight.setTime(saved.timeHours);
       if (missions.loadState) missions.loadState(saved);
+      if (Array.isArray(saved.packages)) packages.loadCollected(saved.packages);
     }
   }
   audio.ensure();
@@ -227,6 +232,7 @@ function step(dt) {
   pedestrians.update(dt, ctx);
   police.update(dt, ctx);
   missions.update(dt, ctx);
+  packages.update(dt, ctx);
   dayNight.update(dt);
 
   const mode = player.onFoot ? 'foot' : 'drive';
@@ -266,6 +272,8 @@ function step(dt) {
     graph,
     police: police.units || [],
     missionMarker: missions.markerPos || null,
+    packages: packages.markers(),
+    packagesCount: packages.count(),
   });
 
   if (audio.setEngine) {
@@ -317,6 +325,7 @@ function runGame() {
       health: player.health,
       timeHours: dayNight.timeHours,
       mission: missions.active,
+      packages: packages.collectedIds(),
       pos: player.pos,
     });
     hud.toast('Disimpan ke slot 1');
