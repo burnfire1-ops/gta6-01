@@ -1,8 +1,8 @@
-// missions.js — 8 misi cerita Raka, kurir Teluk Cahaya (GTA6-01 round 3).
-// Misi 1 bisa dimainkan penuh (antar paket ke marker -> +$200, toast, autosave).
-// Misi 2-8 didefinisikan sebagai data + startMission memunculkan objectiveText
-// dan beacon kuning; update() menyelesaikan misi saat syaratnya terpenuhi
-// (umumnya: pemain < 6 unit dari marker; misi 3/5/6/7/8 punya syarat khusus).
+// missions.js — 8 misi
+// Misi 1 bisa dimainkan
+// Misi 2-8 didefinisikan
+// dan beacon kuning;
+// (umumnya: pemain < 6
 import * as THREE from 'three';
 import { buildWalkerMesh } from './pedestrians.js';
 
@@ -108,7 +108,7 @@ export function createMissions(ctx) {
   function cleanupActive() {
     const a = state.active;
     if (!a) return;
-    // Bersihkan entitas khusus misi (mobil target / dummy penjaga).
+    // Bersihkan entitas k
     if (a.targetCar) {
       const fleet = ctx && (ctx.vehicles || ctx.fleet);
       if (fleet && typeof fleet.removeCar === 'function') fleet.removeCar(a.targetCar);
@@ -134,7 +134,7 @@ export function createMissions(ctx) {
     payReward(a);
     state.completed.add(a.index);
     if (ctx && typeof ctx.toast === 'function') {
-      ctx.toast(`Misi selesai: ${a.title} +$${a.reward}`);
+      ctx.toast(`Misi selesai: ${a.title} +Rp ${a.reward}`);
     }
     if (ctx && typeof ctx.save === 'function') {
       try { ctx.save(); } catch (e) { /* autosave gagal -> lanjut */ }
@@ -176,14 +176,14 @@ export function createMissions(ctx) {
     };
 
     if (index === 2) {
-      // Lolos Patroli: patroli langsung mengejar di wanted 2.
+      // Lolos Patroli: pa
       if (ctx && ctx.police && typeof ctx.police.addWanted === 'function') {
         ctx.police.addWanted(2);
         a.sawWanted2 = true;
       }
       state.objectiveText = 'Kabur dari patroli! Putus garis pandang sampai wanted 0.';
     } else if (index === 4) {
-      // Kejar Target: mobil target kabur dari marker pelabuhan.
+      // Kejar Target: mob
       const fleet = ctx && (ctx.vehicles || ctx.fleet);
       if (fleet && typeof fleet.spawnCar === 'function') {
         const targetCar = fleet.spawnCar('sedan', {
@@ -195,7 +195,7 @@ export function createMissions(ctx) {
       }
       state.objectiveText = 'Tabrak mobil target sampai hancur! (health target 100)';
     } else if (index === 5) {
-      // Gudang Pelabuhan: 3 penjaga dummy di sekitar marker.
+      // Gudang Pelabuhan:
       a.dummies = [];
       for (let i = 0; i < 3; i++) {
         const mesh = buildWalkerMesh(0xcc2222);
@@ -207,13 +207,13 @@ export function createMissions(ctx) {
       }
       state.objectiveText = 'Kalahkan 3 penjaga gudang: dekati lalu tekan F. (0/3)';
     } else if (index === 6) {
-      // Konvoi Tiga Titik: 3 checkpoint berwaktu, 150 detik.
+      // Konvoi Tiga Titik
       a.checkpoints = [boulevard, neon, port];
       a.timer = 150;
       a.markerPos = { ...a.checkpoints[0] };
       state.objectiveText = 'Checkpoint 1/3: Boulevard. Sisa waktu 150 detik.';
     } else if (index === 7) {
-      // Pelarian Final: wanted 5 + capai ujung kota.
+      // Pelarian Final: w
       if (ctx && ctx.police && typeof ctx.police.addWanted === 'function') {
         ctx.police.addWanted(5);
       }
@@ -253,19 +253,19 @@ export function createMissions(ctx) {
     const wanted = ctx && ctx.police ? (ctx.police.wanted || 0) : 0;
 
     if (a.index === 2) {
-      // Lolos Patroli: selesai saat wanted kembali 0 setelah pernah 2.
+      // Lolos Patroli: se
       if (wanted >= 2) a.sawWanted2 = true;
       state.objectiveText = a.sawWanted2
         ? `Kabur! Wanted ${wanted} bintang — putus garis pandang sampai 0.`
         : 'Tunggu patroli datang…';
       if (a.sawWanted2 && wanted === 0) { completeMission(); return; }
-      // Fallback bila polisi tidak tersedia: capai marker.
+      // Fallback bila pol
       if (!ctx.police && distToMarker(a) < 6) { completeMission(); return; }
       return;
     }
 
     if (a.index === 3) {
-      // Antar Malam: hanya selesai di malam hari.
+      // Antar Malam: hany
       const night = isNight(ctx ? ctx.timeHours : undefined);
       state.objectiveText = night
         ? 'Malam tiba. Antar paket ke marker Neon!'
@@ -275,7 +275,7 @@ export function createMissions(ctx) {
     }
 
     if (a.index === 4 && a.targetCar) {
-      // Kejar Target: target kabur menjauh dari pemain; tabrakan mengurangi health.
+      // Kejar Target: tar
       const tc = a.targetCar;
       if (player && player.pos) {
         const away = Math.atan2(tc.pos.x - player.pos.x, tc.pos.z - player.pos.z);
@@ -307,7 +307,7 @@ export function createMissions(ctx) {
     }
 
     if (a.index === 5 && a.dummies) {
-      // Gudang: tekan F di dekat penjaga dummy (edge-trigger).
+      // Gudang: tekan F d
       const pressed = readInteract(ctx ? ctx.input : null);
       const edge = pressed && !state.prevInteract;
       state.prevInteract = pressed;
@@ -327,7 +327,7 @@ export function createMissions(ctx) {
     }
 
     if (a.index === 6 && a.checkpoints) {
-      // Konvoi: 3 checkpoint berwaktu.
+      // Konvoi: 3 checkpo
       a.timer -= d;
       if (a.timer <= 0) { failMission('Waktu habis! Konvoi gagal — coba lagi.'); return; }
       state.objectiveText = `Checkpoint ${a.checkpointIndex + 1}/3 — sisa ${Math.ceil(a.timer)} detik.`;
@@ -341,12 +341,12 @@ export function createMissions(ctx) {
     }
 
     if (a.index === 1) {
-      // Mobil Sendiri: harus tiba di marker dengan mobil curian.
+      // Mobil Sendiri: ha
       if (player && player.currentCar && distToMarker(a) < 6) { completeMission(); return; }
       return;
     }
 
-    // Misi 1 & 8 (dan fallback semua misi): capai marker < 6 unit.
+    // Misi 1 & 8 (dan fal
     if (distToMarker(a) < 6) { completeMission(); return; }
   }
 

@@ -1,13 +1,13 @@
-// Day/night cycle for Teluk Cahaya: one city day = 720 s. A single directional
-// sun (intensity ~2.5) + hemisphere fill, ACES tone mapping, sky colour keyframes
-// (pastel blue day, orange golden hour, navy night). At night, every material
-// flagged userData.glow (building windows, neon, lamp heads, lighthouse) lights
-// up and the rotating lighthouse beam spins.
+// Day/night cycle for
+// sun (intensity ~2.5) +
+// (pastel blue day, orang
+// flagged userData.glow
+// up and the rotating
 
 import * as THREE from 'three';
 import { DAY_LENGTH_SECONDS, PALETTE } from './config.js';
 
-// Sky keyframes: [hour, colour]. Interpolated in order.
+// Sky keyframes: [hour,
 const SKY_KEYS = [
   [0, 0x0d1530],
   [5, 0x1a2340],
@@ -30,11 +30,11 @@ function skyColorAt(hour) {
 }
 
 function nightFactorAt(hour) {
-  // 0 in full day (08:00-16:30), 1 in full night (19:30-05:00), smooth between.
+  // 0 in full day (08:00-
   if (hour >= 19.5 || hour < 5) return 1;
   if (hour >= 8 && hour <= 16.5) return 0;
   if (hour > 16.5 && hour < 19.5) return (hour - 16.5) / 3;
-  return (8 - hour) / 3; // 05:00 -> 08:00
+  return (8 - hour) / 3;
 }
 
 export function createDayNight(scene) {
@@ -58,7 +58,7 @@ export function createDayNight(scene) {
   const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x8a7a5a, 0.75);
   scene.add(hemi);
 
-  // Collect every emissive "night glow" material once (city flags them).
+  // Collect every emissiv
   const glowMats = new Set();
   const beams = [];
   scene.traverse((obj) => {
@@ -68,17 +68,17 @@ export function createDayNight(scene) {
     if (obj.userData && obj.userData.spinBeam) beams.push(obj);
   });
 
-  let timeHours = 9; // city day starts at 09:00
+  let timeHours = 9; // ci
 
   function apply(hour) {
     const sky = skyColorAt(hour);
     scene.background.copy(sky);
     const dayFrac = THREE.MathUtils.clamp((hour - 6) / 12, 0, 1);
     const el = Math.sin(dayFrac * Math.PI); // 0 at dawn/dusk, 1 at noon
-    const az = Math.PI * (1 - dayFrac); // east -> west
+    const az = Math.PI * (1 - dayFrac); // e
     const night = nightFactorAt(hour);
     if (night >= 1) {
-      // Moonlight: same directional light, dim and blue.
+      // Moonlight: same d
       sun.intensity = 0.35;
       sun.color.setHex(0x8fa8d8);
       sun.position.set(-60, 140, -80);

@@ -1,9 +1,9 @@
-// Boot Teluk Cahaya (three.js r187): renderer + scene, all systems wired in
-// contract order, one setAnimationLoop with a clamped delta (max 0.05 s).
-// Screens: title / play / paused / gameover (DOM menus from the HUD).
-// ?shot=start|play|end&seed=N stages that scene via shots.js, paints twice and
-// sets window.__shotReady. ?seed=N fixes the city seed; otherwise it is random.
-// window.__game exposes the live systems for Playwright.
+// Boot Teluk Cahaya (thre
+// contract order, one
+// Screens: title / play /
+// ?shot=start|play|end&se
+// sets window.__shotReady
+// window.__game exposes
 
 import * as THREE from 'three';
 import { CITY, DAY_LENGTH_SECONDS, MISSIONS, SEED } from './config.js';
@@ -52,7 +52,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 900);
 camera.position.set(0, 6, -12);
 
-// --- Build the world (foundation + city). ---
+// --- Build the world
 const graph = createRoadGraph();
 const city = buildCity(scene, graph, rng);
 const dayNight = createDayNight(scene);
@@ -119,8 +119,8 @@ const ctx = {
 
 function showScreen(name) {
   screen = name;
-  // hud.js only knows 'title'/'pause'/'controls': the game-over menu is
-  // toggled directly here so it actually appears.
+  // hud.js only knows 'ti
+  // toggled directly here
   const gameoverMenu = document.getElementById('menu-gameover');
   if (gameoverMenu) gameoverMenu.style.display = name === 'gameover' ? 'flex' : 'none';
   if (name === 'play') {
@@ -162,8 +162,8 @@ function endGame(reason) {
   const text = document.getElementById('gameover-text');
   if (text) {
     text.textContent = reason === 'caught'
-      ? `Polisi menangkap Raka. Denda $${fine} — wanted bersih, mulai lagi dari kantor polisi.`
-      : `Raka pingsan dan bangun di titik aman. Denda $${fine} untuk biaya rumah sakit.`;
+      ? `Polisi menangkap Raka. Denda Rp ${fine.toLocaleString('id-ID')} — wanted bersih, mulai lagi dari kantor polisi.`
+      : `Raka pingsan dan bangun di titik aman. Denda Rp ${fine.toLocaleString('id-ID')} untuk biaya rumah sakit.`;
   }
   player.health = 100;
   if (police.reset) police.reset();
@@ -206,13 +206,13 @@ function handleInteract() {
 
 function step(dt) {
   const actions = input.takeActions();
-  input._actions = actions; // consumed by player.update (jump) this frame only
+  input._actions = actions;
   ctx.interactPressed = Boolean(actions & ACTION_INTERACT);
   ctx.cameraYaw = chaseCamera.yaw;
 
   handleActions(actions);
   if (screen === 'title') {
-    // Title backdrop: slow aerial orbit over the boulevard so the city reads alive.
+    // Title backdrop: slo
     const t = performance.now() * 0.00002;
     camera.position.set(Math.sin(t) * 120, 55, Math.cos(t) * 120);
     camera.lookAt(0, 8, 0);
@@ -226,11 +226,11 @@ function step(dt) {
   if (actions & ACTION_INTERACT) handleInteract();
   if (actions & ACTION_ATTACK) player.attack();
 
-  // Update order: player/vehicles -> traffic -> pedestrians -> police ->
-  // missions -> dayNight -> camera -> hud -> render.
+  // Update order: player/
+  // missions -> dayNight
   player.update(dt, input, ctx);
   fleet.update(dt, ctx);
-  // Player rig rides the car once the fleet has moved it.
+  // Player rig rides the
   if (!player.onFoot && player.currentCar) {
     player.pos.x = player.currentCar.pos?.x ?? player.currentCar.x ?? player.pos.x;
     player.pos.z = player.currentCar.pos?.z ?? player.currentCar.z ?? player.pos.z;
@@ -265,6 +265,7 @@ function step(dt) {
   }
   hud.update({
     wanted: game.state.wanted,
+    wantedEscaping: police.wantedEscaping,
     money: game.state.money,
     health: player.health,
     armor: player.armor,
@@ -281,7 +282,7 @@ function step(dt) {
     missionMarker: missions.markerPos || null,
   });
 
-  // Audio follows state: engine hum while driving, siren while wanted.
+  // Audio follows state:
   if (audio.setEngine) {
     const rpm = player.onFoot ? 0 : Math.min(1, player.speed / 38);
     audio.setEngine(rpm);
@@ -307,7 +308,7 @@ function runShot(name) {
   if (staged && staged.screen === 'gameover') showScreen('gameover');
   else if (staged && staged.screen === 'title') showScreen('title');
   else showScreen('play');
-  // Paint twice so textures/shadows settle, then signal the screenshot.
+  // Paint twice so textur
   let painted = 0;
   function paint() {
     dayNight.update(0);
@@ -320,7 +321,7 @@ function runShot(name) {
 }
 
 function runGame() {
-  // Menu buttons (also work without pointer lock / keyboard).
+  // Menu buttons (also
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', fn);

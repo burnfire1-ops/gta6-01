@@ -1,7 +1,7 @@
-// traffic.js — Lalu lintas NPC Teluk Cahaya (GTA6-01 round 3).
-// 10 mobil NPC mengikuti graph jalan dengan A*: berhenti di lampu merah dan di
-// belakang mobil lain, hitung ulang rute bila terhalang, dan menepi saat ada
-// pengejaran polisi (wanted > 0). Mesh dibuat lewat fleet.spawnCar (driver 'npc').
+// traffic.js — Lalu linta
+// 10 mobil NPC mengikuti
+// belakang mobil lain,
+// pengejaran polisi (want
 import { clamp, turnToward } from './vehicles.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
@@ -46,7 +46,7 @@ export function createTraffic(scene, graph, fleet, rng) {
     const destId = dest.id !== undefined ? dest.id : dest;
     car._t.route = planRoute(graph, fromId, destId);
     car._t.wp = 0;
-    // Lewati waypoint pertama bila itu posisi sekarang.
+    // Lewati waypoint per
     if (car._t.route.length && String(car._t.route[0]) === String(fromId)) car._t.wp = 1;
   }
 
@@ -56,8 +56,8 @@ export function createTraffic(scene, graph, fleet, rng) {
     car.driver = 'npc';
     car._t = {
       route: [], wp: 0,
-      cruise: 8 + rand() * 4, // 8-12 unit/detik
-      state: 'route', // 'route' | 'stopped' | 'pullover'
+      cruise: 8 + rand() * 4, // 8-1
+      state: 'route', // '
       blockedTimer: 0,
       pullTarget: null,
       repathTimer: 0,
@@ -93,7 +93,7 @@ export function createTraffic(scene, graph, fleet, rng) {
       const t = car._t;
       if (!t) continue;
 
-      // --- Menepi saat pengejaran: NPC dalam radius 30 dari pemain berhenti di tepi jalan.
+      // --- Menepi saat p
       if (wanted > 0 && player && player.pos) {
         const dp = Math.hypot(car.pos.x - player.pos.x, car.pos.z - player.pos.z);
         if (dp < 30 && t.state !== 'pullover') {
@@ -102,7 +102,7 @@ export function createTraffic(scene, graph, fleet, rng) {
             ? graph.projectToRoad(car.pos.x, car.pos.z) : null;
           const cx = road ? road.x : car.pos.x;
           const cz = road ? road.z : car.pos.z;
-          // Tepi jalan: geser tegak lurus arah mobil sejauh 5,5 unit.
+          // Tepi jalan: g
           const px = -Math.cos(car.heading);
           const pz = Math.sin(car.heading);
           t.pullTarget = { x: cx + px * 5.5, z: cz + pz * 5.5 };
@@ -130,7 +130,7 @@ export function createTraffic(scene, graph, fleet, rng) {
         }
       }
 
-      // --- Ikuti rute A*.
+      // --- Ikuti rute A*
       if (!t.route.length || t.wp >= t.route.length) newRoute(car);
       if (!t.route.length) { car.speed = 0; continue; }
       const wpNode = nodePos(graph, t.route[t.wp]);
@@ -140,7 +140,7 @@ export function createTraffic(scene, graph, fleet, rng) {
       const dist = Math.hypot(dx, dz);
       if (dist < 3) { t.wp++; continue; }
 
-      // --- Lampu merah: berhenti bila simpul tujuan merah dan sudah dekat.
+      // --- Lampu merah:
       let wantSpeed = t.cruise;
       let atRedLight = false;
       if (dist < 14 && graph && typeof graph.trafficLightState === 'function') {
@@ -151,11 +151,11 @@ export function createTraffic(scene, graph, fleet, rng) {
           }
         } catch (e) { /* lampu tidak tersedia -> jalan terus */ }
       }
-      // --- Mobil di depan: rem.
+      // --- Mobil di depa
       if (carAhead(car)) wantSpeed = 0;
 
-      // --- Anti-macet: terhalang > 2 detik -> rute baru. Lampu merah bukan
-      // macet (jangan hitung ulang), tapi mobil parkir/mobil lain di depan iya.
+      // --- Anti-macet: t
+      // macet (jangan hit
       if (car.speed < 0.5 && !atRedLight) {
         t.blockedTimer += d;
         if (t.blockedTimer > 2) {

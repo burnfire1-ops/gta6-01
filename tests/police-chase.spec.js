@@ -15,8 +15,8 @@
 //       assert tanpa console error / pageerror.
 //   (b) Skenario polisi: teleport pemain ke jalan (graph), wanted 2 via
 //       police.addWanted(2), tunggu 6 detik sim nyata, kumpulkan posisi semua
-//       police.units tiap 500 ms dan assert SETIAP posisi isOnRoad(x, z, 4.5)
-//       true (toleransi 4.5 = band jalan 3.0 + lebar mobil).
+//       police.units tiap 500 ms dan assert SETIAP posisi isOnRoad(x, z, 3.0)
+//       true (toleransi 3.0 = band jalan ROAD_BAND 3.0, sama seperti isOnRoad).
 //   (c) Assert wanted > 0 dan units.length >= 1.
 //   (d) Screenshot kandidat ke screenshots/2-play.jpg (1280x720, JPEG q80,
 //       wajib < 256 KiB) + /tmp/police-chase.png.
@@ -203,7 +203,7 @@ async function main() {
     }
 
     // Kumpulkan posisi polisi tiap 500 ms selama 6 detik sim nyata.
-    const TOLERANCE = 4.5;
+    const TOLERANCE = 3.0;
     let sawIsOnRoadFn = false;
     for (let i = 0; i < 12; i += 1) {
       await sleep(500);
@@ -277,7 +277,7 @@ async function main() {
     if (!(summary.wanted > 0)) fail(`wanted harus > 0, dapat ${summary.wanted}`);
     if (!(summary.policeUnits >= 1)) fail(`unit polisi harus >= 1, dapat ${summary.policeUnits}`);
     if (summary.violations > 0) {
-      fail(`${summary.violations}/${summary.samples} sampel posisi polisi di luar jalan (toleransi 4.5)`);
+      fail(`${summary.violations}/${summary.samples} sampel posisi polisi di luar jalan (toleransi 3.0)`);
     }
     if (summary.samples === 0) fail('tidak ada sampel posisi polisi yang terkumpul');
 

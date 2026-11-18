@@ -1,16 +1,16 @@
-// Audio Teluk Cahaya — 100% sintetis via Web Audio API, tanpa file audio.
-// Dibangun dari tesis §5 + skill audio-design: bus Master <- Music <- MusicDuck,
-// SFX, Ambience, UI; musik adaptif berlapis (pad chord Am-F-C-G, hats saat misi/
-// kejar); sirene men-duck musik; SFX bervariasi pitch/volume kecil tiap bunyi.
+// Audio Teluk Cahaya —
+// Dibangun dari tesis §5
+// SFX, Ambience, UI;
+// kejar); sirene men-duck
 //
-// Kontrak: createAudio() -> { ensure(), setEngine(rpm01), siren(on), blip(),
-// setMood(mood), setMuted(m) }.
-// ensure() HANYA dipanggil dari gesture pengguna (klik/keydown pertama) —
-// AudioContext tidak boleh dibuat sebelum itu. Semua fungsi aman dipanggil
-// sebelum ensure() (no-op) dan ensure() idempotent.
+// Kontrak: createAudio()
+// setMood(mood), setMuted
+// ensure() HANYA dipanggi
+// AudioContext tidak
+// sebelum ensure() (no-op
 
 const CHORDS = {
-  // Am - F - C - G (frekuensi Hz, oktaf rendah untuk pad).
+  // Am - F - C - G (freku
   Am: [110.0, 130.81, 164.81],
   F: [87.31, 110.0, 130.81],
   C: [130.81, 164.81, 196.0],
@@ -49,7 +49,7 @@ export function createAudio() {
   let muted = false;
   let masterGainValue = 0.9;
 
-  // --- Bus (dibuat sekali di ensure) ---
+  // --- Bus (dibuat sekal
   function ensure() {
     if (ctx) {
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -85,7 +85,7 @@ export function createAudio() {
 
       startMusicScheduler();
     } catch {
-      // Audio tidak tersedia: game tetap jalan tanpa suara.
+      // Audio tidak terse
       ctx = null;
     }
   }
@@ -96,13 +96,13 @@ export function createAudio() {
         n.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
         n.oscs.forEach((o) => o.stop(ctx.currentTime + 0.4));
       } catch {
-        // Oscillator sudah berhenti.
+        // Oscillator suda
       }
     }
     chordNodes = [];
   }
 
-  // Satu chord pad: tiap nada = 2 oscillator triangle detune +/-4 sen.
+  // Satu chord pad: tiap
   function playChord(name) {
     if (!ctx || !musicBus) return;
     stopChord();
@@ -140,7 +140,7 @@ export function createAudio() {
     return noiseBuffer;
   }
 
-  // Hat pelan: sepercik noise lewat bandpass — ritme tanpa file.
+  // Hat pelan: sepercik
   function playHat() {
     if (!ctx || !musicBus) return;
     const t = ctx.currentTime;
@@ -180,7 +180,7 @@ export function createAudio() {
     }, 120);
   }
 
-  // --- Mesin: sawtooth + lowpass, frekuensi ikut rpm ---
+  // --- Mesin: sawtooth +
   function setEngine(rpm01) {
     if (!ctx || !sfxBus) return;
     const rpm = Math.max(0, Math.min(1, Number(rpm01) || 0));
@@ -200,11 +200,11 @@ export function createAudio() {
     }
     engineOsc.frequency.setTargetAtTime(60 + 140 * rpm, t, 0.05);
     engineFilter.frequency.setTargetAtTime(400 + 1200 * rpm, t, 0.05);
-    // Gain kecil: mesin hadir, bukan mendominasi.
+    // Gain kecil: mesin h
     engineGain.gain.setTargetAtTime(rpm > 0.02 ? 0.05 + 0.05 * rpm : 0, t, 0.1);
   }
 
-  // --- Sirene: dua nada 700/950 Hz bergantian via LFO; musik di-duck ---
+  // --- Sirene: dua nada
   function siren(on) {
     sirenOn = !!on;
     if (!ctx || !sfxBus) return;
@@ -212,12 +212,12 @@ export function createAudio() {
     if (on && !sirenOsc) {
       sirenOsc = ctx.createOscillator();
       sirenOsc.type = 'triangle';
-      sirenOsc.frequency.value = 825; // tengah 700-950
+      sirenOsc.frequency.value = 825; // ten
       sirenLfo = ctx.createOscillator();
       sirenLfo.type = 'sine';
-      sirenLfo.frequency.value = 0.6; // ~1 pergantian nada per 0,8 dtk
+      sirenLfo.frequency.value = 0.6; // ~1
       sirenLfoGain = ctx.createGain();
-      sirenLfoGain.gain.value = 125; // 825 +/- 125 = 700..950 Hz
+      sirenLfoGain.gain.value = 125; // 825
       sirenLfo.connect(sirenLfoGain);
       sirenLfoGain.connect(sirenOsc.frequency);
       sirenGain = ctx.createGain();
@@ -242,13 +242,13 @@ export function createAudio() {
         // Sudah berhenti.
       }
     }
-    // Duck musik di bawah sirene (bus duck terpisah — slider musik tidak tertimpa).
+    // Duck musik di bawah
     if (musicDuck) {
       musicDuck.gain.setTargetAtTime(on ? 0.5 : 1.0, t, 0.15);
     }
   }
 
-  // --- Blip UI: square 880 Hz, 0,06 detik, variasi pitch kecil tiap bunyi ---
+  // --- Blip UI: square
   function blip() {
     if (!ctx || !uiBus) return;
     const t = ctx.currentTime;

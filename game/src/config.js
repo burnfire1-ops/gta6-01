@@ -1,6 +1,6 @@
-// Every tuning number and colour in one place. Teluk Cahaya is a ~440x440 coastal
-// city on a road grid (roads every 40 units) with four districts. No rule below
-// depends on the screen size.
+// Every tuning number and
+// city on a road grid
+// depends on the screen
 
 export const SEED = 1337;
 

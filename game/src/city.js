@@ -1,8 +1,8 @@
-// Procedural Teluk Cahaya: ground, sea + beach, asphalt streets with dashed
-// centre lines, district-dialect buildings, landmarks (glass tower, lighthouse,
-// harbour bridge), palms, street lamps, benches and signs. All geometry is
-// built from three.js primitives + canvas textures drawn at load; no assets
-// are fetched. Buildings are placed inside blocks, never on the road graph.
+// Procedural Teluk Cahaya
+// centre lines, district-
+// harbour bridge), palms,
+// built from three.js
+// are fetched. Buildings
 
 import * as THREE from 'three';
 import { CITY, PALETTE } from './config.js';
@@ -39,7 +39,7 @@ function facadeTextures(base, rng, litRatio) {
   const emissiveMap = canvasTexture(128, 256, (g, w, h) => {
     g.fillStyle = '#000000';
     g.fillRect(0, 0, w, h);
-    // Windows glow at night: reuse the same grid positions by redrawing lit ones.
+    // Windows glow at nig
     for (let r = 0; r < rows; r += 1) {
       for (let c = 0; c < cols; c += 1) {
         if (rng() < litRatio) {
@@ -73,7 +73,7 @@ export function buildCity(scene, graph, rng) {
   group.name = 'city';
   scene.add(group);
 
-  // --- Ground: sand/grass base, sea to the west, beach strip on the shore. ---
+  // --- Ground: sand/gras
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(CITY.size + 40, CITY.size + 40),
     new THREE.MeshStandardMaterial({ color: 0xc9d6a0, roughness: 1 }),
@@ -98,7 +98,7 @@ export function buildCity(scene, graph, rng) {
   beach.position.set(CITY.seaEdgeX - 5, 0.02, 0);
   group.add(beach);
 
-  // --- Roads: dark asphalt plane per street segment + dashed centre line. ---
+  // --- Roads: dark aspha
   const asphaltTex = roadTexture();
   const roadMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   const sidewalkMat = new THREE.MeshStandardMaterial({ color: PALETTE.sidewalk, roughness: 1 });
@@ -130,7 +130,7 @@ export function buildCity(scene, graph, rng) {
     void roadMat;
   }
 
-  // --- District facade dialects (art-deco coral, neon teal glass, industrial concrete). ---
+  // --- District facade
   const dialects = {
     artdeco: { base: '#ffb08a', hMin: 10, hMax: 22, lit: 0.35, roof: 0xe86a5a },
     neon: { base: '#7fd4d0', hMin: 18, hMax: 38, lit: 0.55, roof: 0xff5da2 },
@@ -149,7 +149,7 @@ export function buildCity(scene, graph, rng) {
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const roofGeo = new THREE.BoxGeometry(1, 1, 1);
 
-  // --- Buildings: one or two per block, inset from the streets. ---
+  // --- Buildings: one or
   const half = CITY.half;
   const spacing = CITY.roadSpacing;
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
@@ -181,7 +181,7 @@ export function buildCity(scene, graph, rng) {
     }
   }
 
-  // --- Landmark: tallest glass tower near the centre (20, -20 block). ---
+  // --- Landmark: tallest
   const towerMat = new THREE.MeshStandardMaterial({
     color: PALETTE.glassTeal, roughness: 0.25, metalness: 0.4,
     emissive: 0xffd27a, emissiveIntensity: 0,
@@ -199,7 +199,7 @@ export function buildCity(scene, graph, rng) {
   group.add(towerTop);
   colliders.push({ x: 20, z: -20, r: 16 });
 
-  // --- Landmark: harbour bridge deck from the shore to the lighthouse island. ---
+  // --- Landmark: harbour
   const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x8a7f72, roughness: 0.9 });
   const bridge = new THREE.Mesh(boxGeo, bridgeMat);
   bridge.scale.set(84, 1.2, 10);
@@ -212,7 +212,7 @@ export function buildCity(scene, graph, rng) {
     rail.position.set(-260, 2.2, 120 + dz);
     group.add(rail);
   }
-  // Small island under the lighthouse.
+  // Small island under
   const island = new THREE.Mesh(
     new THREE.CylinderGeometry(16, 20, 2, 10),
     new THREE.MeshStandardMaterial({ color: PALETTE.sand, roughness: 1 }),
@@ -220,7 +220,7 @@ export function buildCity(scene, graph, rng) {
   island.position.set(-300, -0.4, 120);
   group.add(island);
 
-  // --- Landmark: lighthouse at the end of the bridge, with a rotating beam. ---
+  // --- Landmark: lightho
   const lighthouse = new THREE.Group();
   lighthouse.position.set(-300, 1, 120);
   const lhBase = new THREE.Mesh(
@@ -256,7 +256,7 @@ export function buildCity(scene, graph, rng) {
   group.add(lighthouse);
   colliders.push({ x: -300, z: 120, r: 7 });
 
-  // --- Palms: instanced trunks + crowns along the streets. ---
+  // --- Palms: instanced
   const palmSpots = [];
   for (const edge of graph.edges) {
     const a = graph.nodeById.get(edge.a);
@@ -289,7 +289,7 @@ export function buildCity(scene, graph, rng) {
   group.add(trunks);
   group.add(crowns);
 
-  // --- Street lamps: instanced poles, individual glowing heads (night-lit). ---
+  // --- Street lamps: ins
   const lampHeadMat = new THREE.MeshStandardMaterial({
     color: 0xfff2b0, emissive: 0xffe9a8, emissiveIntensity: 0,
   });
@@ -311,7 +311,7 @@ export function buildCity(scene, graph, rng) {
   });
   group.add(poles);
 
-  // --- Benches + road signs on the art-deco boulevard. ---
+  // --- Benches + road
   const benchMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 1 });
   for (let i = 0; i < 10; i += 1) {
     const bench = new THREE.Mesh(boxGeo, benchMat);
@@ -340,7 +340,7 @@ export function buildCity(scene, graph, rng) {
     group.add(sign);
   }
 
-  // Neon district glow strips: pink emissive bars on a few neon buildings.
+  // Neon district glow
   const neonMat = new THREE.MeshStandardMaterial({
     color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0,
   });

@@ -1,23 +1,23 @@
-// Screenshot scenes Teluk Cahaya di balik ?shot=start|play|end.
-// Tulis ulang total untuk rebuild round 3 — DITURUNKAN DARI TESIS, bukan dari
-// kode game lama. Setiap scene memainkan simulasi nyata maju beberapa detik
-// (bukan pose mati) supaya frame-nya hidup: traffic jalan, pejalan kaki jalan,
+// Screenshot scenes Teluk
+// Tulis ulang total untuk
+// kode game lama. Setiap
+// (bukan pose mati) supay
 // polisi mengejar.
 //
-// Kontrak: stageShot(name, game) -> { screen: 'title' | 'play' }.
-// game = objek dari main.js: { player, police, vehicles, traffic, pedestrians,
-// missions, graph, dayNight, hud, state, ... }.
-// DITULIS DEFENSIF: tiap subsistem dicek keberadaannya sebelum dipakai, karena
-// main.js bisa memanggil stageShot sebelum semua sistem siap. Yang tidak ada
-// dilewati diam-diam — main.js yang menandai window.__shotReady setelah 2x paint.
+// Kontrak: stageShot(name
+// game = objek dari main.
+// missions, graph, dayNig
+// DITULIS DEFENSIF: tiap
+// main.js bisa memanggil
+// dilewati diam-diam —
 //
 // Scene (tesis §3):
-//   start — siang (jam 10), pemain jalan kaki di zebra cross boulevard dekat
-//           menara kaca, traffic + pejalan kaki berjalan, HUD title tampil.
-//   play  — golden hour (jam 17.5), pemain di mobil sport teal, wanted 2,
-//           2 unit pursuit di belakang, misi 1 aktif + marker terlihat.
-//   end   — malam neon (jam 21), wanted 5, 4 unit pursuit, mobil pemain di
-//           persimpangan pelabuhan.
+//   start — siang (jam
+//           menara kaca,
+//   play  — golden hour
+//           2 unit pursui
+//   end   — malam neon
+//           persimpangan
 
 const STEP = 1 / 60;
 const SIM_SECONDS = 4;
@@ -26,7 +26,7 @@ function isFn(v) {
   return typeof v === 'function';
 }
 
-// Ambil posisi {x, z} dari berbagai bentuk: {x,z}, {x,y}, {x,y,z}.
+// Ambil posisi {x, z}
 function readPos(obj) {
   if (!obj || typeof obj !== 'object') return null;
   const p = obj.pos || obj.position || obj;
@@ -58,12 +58,12 @@ function setHeading(obj, radians) {
     if (typeof obj.heading === 'number') obj.heading = radians;
     else if (obj.rotation && typeof obj.rotation.y === 'number') obj.rotation.y = radians;
   } catch {
-    // Heading tidak bisa diset: abaikan.
+    // Heading tidak bisa
   }
 }
 
-// RNG kecil deterministik (mulberry32) — dipakai saat game tidak menyediakan
-// rng-nya sendiri, supaya scene screenshot bisa direproduksi persis.
+// RNG kecil deterministik
+// rng-nya sendiri, supaya
 function mulberry32(seed) {
   let a = seed | 0;
   return function random() {
@@ -74,8 +74,8 @@ function mulberry32(seed) {
   };
 }
 
-// Satu node jalan sebagai {x, z}, dari API graph apa pun yang tersedia.
-// randomRoadNode butuh rng sebagai argumen pertama — jangan panggil tanpa rng.
+// Satu node jalan sebagai
+// randomRoadNode butuh
 function pickRoadNode(graph, prefer, rng) {
   if (!graph) return { x: 0, z: 0 };
   const rand = typeof rng === 'function' ? rng : mulberry32(1);
@@ -85,7 +85,7 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // nearestNode gagal: lanjut ke cara berikut.
+    // nearestNode gagal:
   }
   try {
     if (isFn(graph.randomRoadNode)) {
@@ -93,7 +93,7 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // randomRoadNode gagal: lanjut ke daftar node.
+    // randomRoadNode gaga
   }
   try {
     if (Array.isArray(graph.nodes) && graph.nodes.length > 0) {
@@ -115,12 +115,12 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // Daftar node tidak bisa dibaca.
+    // Daftar node tidak b
   }
   return { x: 0, z: 0 };
 }
 
-// Node jalan terjauh dari pusat — perkiraan persimpangan pelabuhan (tepi kota).
+// Node jalan terjauh dari
 function pickEdgeNode(graph) {
   if (!graph || !Array.isArray(graph.nodes) || graph.nodes.length === 0) {
     return pickRoadNode(graph, null);
@@ -146,7 +146,7 @@ function setTime(game, hours) {
     else if (game.dayNight && typeof game.dayNight.timeHours === 'number') game.dayNight.timeHours = hours;
     else if (game.state && typeof game.state.timeHours === 'number') game.state.timeHours = hours;
   } catch {
-    // Jam kota tidak bisa diset: abaikan.
+    // Jam kota tidak bisa
   }
 }
 
@@ -157,13 +157,13 @@ function setWanted(game, level) {
       return;
     }
   } catch {
-    // addWanted gagal: jatuh ke set langsung.
+    // addWanted gagal: ja
   }
   try {
     if (game.police && typeof game.police.wanted === 'number') game.police.wanted = level;
     if (game.state && typeof game.state.wanted === 'number') game.state.wanted = level;
   } catch {
-    // Wanted tidak bisa diset: abaikan.
+    // Wanted tidak bisa d
   }
 }
 
@@ -174,16 +174,17 @@ function spawnPursuit(game, count) {
       for (let i = 0; i < count; i += 1) game.police.spawnPursuitUnit();
     }
   } catch {
-    // Spawn manual gagal: update loop polisi yang akan memunculkan unit.
+    // Spawn manual gagal:
+    // ada yang menggantik
   }
 }
 
-// Cari kendaraan yang sudah ada, atau minta sistem kendaraan membuatkannya.
+// Cari kendaraan yang
 function findOrSpawnVehicle(game, pos) {
   const vehicles = game.vehicles;
   if (!vehicles) return null;
-  // 1) Kendaraan yang sudah ada: pilih sport, kalau tidak ada ambil yang pertama.
-  //    Fleet menyimpan daftarnya di `.cars` (bukan `.list`).
+  // 1) Kendaraan yang sud
+  //    Fleet menyimpan
   try {
     const list = Array.isArray(vehicles.cars)
       ? vehicles.cars
@@ -202,9 +203,9 @@ function findOrSpawnVehicle(game, pos) {
       }
     }
   } catch {
-    // Daftar kendaraan belum siap.
+    // Daftar kendaraan be
   }
-  // 2) Minta dibuatkan. Fleet memakai spawnCar(type, pos); sisanya fallback.
+  // 2) Minta dibuatkan.
   const makers = [vehicles.spawnCar, vehicles.spawn, vehicles.create, vehicles.spawnVehicle, game.spawnVehicle];
   for (const make of makers) {
     if (!isFn(make)) continue;
@@ -212,7 +213,7 @@ function findOrSpawnVehicle(game, pos) {
       const v = make.call(vehicles, 'sport', { x: pos.x, z: pos.z }, { color: '#2ec4b6' });
       if (v) return v;
     } catch {
-      // Satu signature gagal: coba pembuat berikutnya.
+      // Satu signature ga
     }
     try {
       const v = make.call(vehicles, { x: pos.x, z: pos.z });
@@ -227,7 +228,7 @@ function findOrSpawnVehicle(game, pos) {
 function enterVehicle(game, vehicle) {
   if (!vehicle) return false;
   try {
-    // Nama metode di modul player adalah enterCar (bukan enterVehicle).
+    // Nama metode di modu
     if (game.player && isFn(game.player.enterCar)) {
       game.player.enterCar(vehicle);
     } else if (game.player && isFn(game.player.enterVehicle)) {
@@ -240,18 +241,18 @@ function enterVehicle(game, vehicle) {
     } else {
       return false;
     }
-    // Sinkronkan snapshot luar player: createPlayer mengembalikan
-    // {...state} (spread) sehingga onFoot/currentCar di objek luar adalah
-    // SALINAN STALE — enterCar mengubah state internal, tapi main.js membaca
-    // player.onFoot/currentCar dari salinan itu (mode kamera, HUD kendaraan).
-    // Tulis salinannya juga supaya dunia luar melihat pemain sudah di mobil.
-    // (Perbaikan benar: player.js harus mengembalikan getter live / state
-    // itu sendiri — dicatat sebagai temuan integrasi, bukan diperbaiki di sini.)
+    // Sinkronkan snapshot
+    // {...state} (spread)
+    // SALINAN STALE — ent
+    // player.onFoot/curre
+    // Tulis salinannya ju
+    // (Perbaikan benar: p
+    // itu sendiri — dicat
     try {
       game.player.onFoot = false;
       game.player.currentCar = vehicle;
     } catch {
-      // Properti read-only: abaikan.
+      // Properti read-onl
     }
     return true;
   } catch {
@@ -269,15 +270,15 @@ function exitVehicle(game) {
       game.player.currentCar = null;
       game.player.onFoot = true;
     }
-    // Sinkronkan snapshot luar juga (lihat enterVehicle).
+    // Sinkronkan snapshot
     try {
       game.player.onFoot = true;
       game.player.currentCar = null;
     } catch {
-      // Properti read-only: abaikan.
+      // Properti read-onl
     }
   } catch {
-    // Keluar mobil gagal: abaikan.
+    // Keluar mobil gagal:
   }
 }
 
@@ -291,19 +292,19 @@ function startFirstMission(game) {
       if (first && first.id !== undefined) tries.unshift(first.id);
     }
   } catch {
-    // Daftar misi belum siap.
+    // Daftar misi belum s
   }
   for (const id of tries) {
     try {
       missions.startMission(id);
       return;
     } catch {
-      // Coba id berikutnya.
+      // Coba id berikutny
     }
   }
 }
 
-// Majukan simulasi secukupnya supaya frame hidup (bukan pose mati).
+// Majukan simulasi secuku
 function advanceSim(game, seconds) {
   const steps = Math.round(seconds / STEP);
   const updaters = [];
@@ -319,15 +320,15 @@ function advanceSim(game, seconds) {
       try {
         u(STEP);
       } catch {
-        // Satu subsistem gagal di satu langkah: lanjutkan langkah berikutnya.
+        // Satu subsistem
       }
     }
   }
 }
 
-// Susun state HUD dari objek game untuk satu panggilan hud.update().
-// Penting: runShot di main.js TIDAK menjalankan frame loop (hanya render 2x),
-// jadi tanpa panggilan ini HUD di screenshot hanya menampilkan isi awal HTML.
+// Susun state HUD dari
+// Penting: runShot di
+// jadi tanpa panggilan
 function pushHudState(g) {
   const hud = g.hud;
   if (!hud || !isFn(hud.update)) return;
@@ -347,6 +348,7 @@ function pushHudState(g) {
       armor: typeof player.armor === 'number' ? player.armor : 0,
       money: typeof state.money === 'number' ? state.money : 0,
       wanted: typeof police.wanted === 'number' ? police.wanted : typeof state.wanted === 'number' ? state.wanted : 0,
+      wantedEscaping: typeof police.wantedEscaping === 'boolean' ? police.wantedEscaping : undefined,
       missionTitle: missions.active && missions.active.title ? missions.active.title : null,
       objectiveText: objective,
       vehicleName: car ? car.name || car.type || null : null,
@@ -363,15 +365,15 @@ function pushHudState(g) {
       speedKmh: 0,
     });
   } catch {
-    // HUD gagal di-update: frame 3D tetap jalan, screenshot tetap diambil.
+    // HUD gagal di-update
   }
 }
 
-// Bingkai kamera chase untuk scene mengemudi (play/end): letakkan kamera di
-// belakang mobil pemain dan arahkan ke depan mobil. Diperlukan karena runShot
-// di main.js TIDAK menjalankan frame loop — kamera chase tidak pernah update
-// mengikuti pemain, sehingga tanpa ini mobil pemain di luar frame.
-// Konvensi heading sama dengan player.js: forward = (sin h, cos h) di (x, z).
+// Bingkai kamera chase
+// belakang mobil pemain
+// di main.js TIDAK menjal
+// mengikuti pemain, sehin
+// Konvensi heading sama
 function frameChaseCamera(game) {
   try {
     const camera = game.camera;
@@ -387,17 +389,21 @@ function frameChaseCamera(game) {
     camera.position.set(p.x - fx * 9, 3.5, p.z - fz * 9);
     camera.lookAt(p.x + fx * 6, 1.2, p.z + fz * 6);
   } catch {
-    // Kamera tidak bisa dibingkai: biarkan posisi awalnya.
+    // Kamera tidak bisa d
   }
 }
 
 export function stageShot(name, game) {
   const g = game || {};
-  // RNG game bila ada, kalau tidak rng deterministik sendiri (seed tetap).
+  // RNG game bila ada,
   const rng = typeof g.rng === 'function' ? g.rng : mulberry32(1);
+  // (d) Isolasi roster
+  // dan kosongkan unit
+  if (g.police && isFn(g.police.setAutoSpawn)) g.police.setAutoSpawn(false);
+  if (g.police && isFn(g.police.clearUnits)) g.police.clearUnits();
 
   if (name === 'play') {
-    // Golden hour, mobil sport teal, wanted 2, misi 1 aktif.
+    // Golden hour, mobil
     setTime(g, 17.5);
     const node = pickRoadNode(g.graph, { x: 0, z: 0 }, rng);
     if (g.player) {
@@ -410,7 +416,7 @@ export function stageShot(name, game) {
     spawnPursuit(g, 2);
     startFirstMission(g);
     advanceSim(g, SIM_SECONDS);
-    // Unit pursuit bisa butuh update loop untuk muncul bila spawn manual gagal.
+    // Unit pursuit bisa b
     if (g.police && Array.isArray(g.police.units) && g.police.units.length === 0) {
       spawnPursuit(g, 2);
       advanceSim(g, 1);
@@ -422,7 +428,7 @@ export function stageShot(name, game) {
   }
 
   if (name === 'end') {
-    // Malam neon, wanted 5, 4 unit pursuit, persimpangan pelabuhan.
+    // Malam neon, wanted
     setTime(g, 21);
     const node = pickEdgeNode(g.graph);
     if (g.player) {
@@ -444,7 +450,7 @@ export function stageShot(name, game) {
     return { screen: 'play' };
   }
 
-  // start (dan nama lain yang tak dikenal): siang, jalan kaki, HUD title.
+  // start (dan nama lain
   setTime(g, 10);
   const node = pickRoadNode(g.graph, { x: 0, z: 0 }, rng);
   exitVehicle(g);
@@ -452,7 +458,7 @@ export function stageShot(name, game) {
     writePos(g.player, node.x, node.z);
     setHeading(g.player, 0);
   }
-  // Traffic + pejalan kaki ikut jalan selama sim dimajukan.
+  // Traffic + pejalan kak
   advanceSim(g, SIM_SECONDS);
   if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('title');
   pushHudState(g);

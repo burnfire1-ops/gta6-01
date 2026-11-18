@@ -1,8 +1,8 @@
-// Raka, the player: a low-poly rig (capsule body, box head, box arms/legs)
-// with procedural sinusoidal walk animation. Moves relative to the camera yaw,
-// runs with Shift, jumps with Space under simple gravity, stays inside the
-// city and is pushed out of building colliders. Entering a car hides the rig
-// and syncs it to the car; exiting places Raka beside the car.
+// Raka, the player: a
+// with procedural sinusoi
+// runs with Shift, jumps
+// city and is pushed out
+// and syncs it to the
 
 import * as THREE from 'three';
 import { CITY, PLAYER } from './config.js';
@@ -22,7 +22,7 @@ export function createPlayer(scene, graph, rng) {
   const group = new THREE.Group();
   group.name = 'player-raka';
 
-  const shirt = 0x2ec4b6; // teal hero colour
+  const shirt = 0x2ec4b6; // t
   const skin = 0xc98d64;
   const pants = 0x2c3444;
 
@@ -110,7 +110,7 @@ export function createPlayer(scene, graph, rng) {
     const side = rng() < 0.5 ? 1 : -1;
     const cx = Math.cos(car.heading ?? 0);
     const sz = Math.sin(car.heading ?? 0);
-    // Step out to the car's flank (perpendicular to its heading).
+    // Step out to the car
     state.pos.x = (car.pos?.x ?? car.x ?? 0) + -sz * 2.2 * side;
     state.pos.z = (car.pos?.z ?? car.z ?? 0) + cx * 2.2 * side;
     state.heading = car.heading ?? 0;
@@ -126,7 +126,7 @@ export function createPlayer(scene, graph, rng) {
   function update(dt, input, ctx) {
     ctx = ctx || {};
     if (!state.onFoot) {
-      // Driving: the rig rides with the car (vehicles.js moves the car).
+      // Driving: the rig
       const car = state.currentCar;
       if (car) {
         const cx = car.pos?.x ?? car.x ?? state.pos.x;
@@ -142,7 +142,7 @@ export function createPlayer(scene, graph, rng) {
     }
 
     const yaw = ctx.cameraYaw ?? 0;
-    // Camera-relative move: forward = (sin yaw, cos yaw) in (x, z).
+    // Camera-relative mov
     const fx = Math.sin(yaw);
     const fz = Math.cos(yaw);
     const rx = -Math.cos(yaw);
@@ -160,7 +160,7 @@ export function createPlayer(scene, graph, rng) {
       state.speed += (targetSpeed - state.speed) * Math.min(1, dt * 10);
       state.pos.x += mx * state.speed * dt;
       state.pos.z += mz * state.speed * dt;
-      // Face the direction of travel, turning toward the camera yaw.
+      // Face the directio
       const targetHeading = Math.atan2(mx, mz);
       let dh = targetHeading - state.heading;
       while (dh > Math.PI) dh -= Math.PI * 2;
@@ -186,13 +186,13 @@ export function createPlayer(scene, graph, rng) {
       }
     }
 
-    // Stay inside the city.
+    // Stay inside the cit
     const lim = CITY.half - 2;
     state.pos.x = THREE.MathUtils.clamp(state.pos.x, -lim, lim);
     state.pos.z = THREE.MathUtils.clamp(state.pos.z, -lim, lim);
     resolveColliders(ctx.city?.colliders);
 
-    // Procedural walk cycle: arms and legs swing in opposition.
+    // Procedural walk cyc
     state._walkPhase += dt * state.speed * 2.2;
     const swing = moving ? Math.sin(state._walkPhase) * 0.55 : 0;
     legL.rotation.x = swing;
@@ -214,8 +214,8 @@ export function createPlayer(scene, graph, rng) {
     state._attackT = 0.25;
   }
 
-  // Return the live state object itself (not a spread copy): main.js, the
-  // camera and the HUD must read onFoot/currentCar/health as they change.
+  // Return the live state
+  // camera and the HUD
   return Object.assign(state, {
     mesh: group,
     update,

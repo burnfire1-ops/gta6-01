@@ -1,7 +1,7 @@
-// Named-action input with buffering: held keys give steering axes, discrete
-// presses (interact, jump, attack, pause, confirm) are queued as bit flags and
-// taken once by the loop, so a press between two frames is never lost and
-// never counted twice. Mouse look accumulates while the pointer is locked.
+// Named-action input with
+// presses (interact,
+// taken once by the loop,
+// never counted twice.
 
 export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;
@@ -50,7 +50,7 @@ export function createInput(canvas) {
   window.addEventListener('keyup', (event) => {
     down.delete(event.code);
   });
-  // A key released while the tab is hidden never sends keyup: let go on blur.
+  // A key released while
   window.addEventListener('blur', () => {
     down.clear();
     mouseDX = 0;
@@ -63,7 +63,7 @@ export function createInput(canvas) {
       mouseDY += event.movementY || 0;
     }
   });
-  // Click the canvas to capture the mouse (orbit look); Esc / pause releases it.
+  // Click the canvas to
   canvas.addEventListener('click', () => {
     if (document.pointerLockElement !== canvas) {
       canvas.requestPointerLock?.();

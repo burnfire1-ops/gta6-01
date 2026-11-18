@@ -1,22 +1,22 @@
-// HUD Teluk Cahaya — DOM-based, event-driven.
-// Dibangun dari tesis §5: minimap bundar kiri bawah (utara di atas, digambar dari
-// data graph jalan yang sama dengan AI), health/armor di bawah minimap, uang,
-// wanted stars kanan atas, panel objektif kiri atas, panel kendaraan saat mengemudi,
-// dan menu sebagai stack (title / pause). Semua teks Indonesia.
+// HUD Teluk Cahaya —
+// Dibangun dari tesis §5:
+// data graph jalan yang
+// wanted stars kanan
+// dan menu sebagai stack
 //
-// Kontrak: createHud() -> { update(state), setObjective(text), showMenu(name),
-// hideMenus(), toast(msg) }.
-// update(state) dipanggil tiap frame oleh main.js, tapi hanya menulis DOM saat
-// nilainya berubah (cache nilai terakhir) — sesuai skill game-ui-ux: HUD tidak
-// polling buta, ia bereaksi terhadap perubahan.
-// Semua elemen dicari dengan getElementById dan BOLEH tidak ada (null-safe):
-// index.html ditulis subagent lain dan mungkin belum lengkap saat modul ini dites.
+// Kontrak: createHud()
+// hideMenus(), toast(msg)
+// update(state) dipanggil
+// nilainya berubah (cache
+// polling buta, ia bereak
+// Semua elemen dicari
+// index.html ditulis
 
 const STAR_FULL = '★';
 const STAR_EMPTY = '☆';
 const MAX_WANTED = 5;
 
-// Jarak dunia (meter game) yang terlihat dari tepi minimap ke pusat.
+// Jarak dunia (meter
 const MINIMAP_RANGE = 140;
 
 function clamp(v, lo, hi) {
@@ -34,7 +34,7 @@ function formatJam(timeHours) {
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
-// Normalisasi satu titik dunia -> {x, z}. Graph bisa memakai {x,z} atau {x,y}.
+// Normalisasi satu titik
 function normPoint(p) {
   if (!p || typeof p !== 'object') return null;
   const x = typeof p.x === 'number' ? p.x : 0;
@@ -42,13 +42,13 @@ function normPoint(p) {
   return { x, z };
 }
 
-// Satu ujung edge bisa berupa indeks node atau titik langsung.
+// Satu ujung edge bisa
 function resolveEndpoint(end, nodes) {
   if (typeof end === 'number') return normPoint(nodes ? nodes[end] : null);
   return normPoint(end);
 }
 
-// Ambil {a, b} (titik) dari satu edge, apa pun bentuk penyimpanannya.
+// Ambil {a, b} (titik)
 function edgePoints(edge, nodes) {
   if (!edge) return null;
   if (Array.isArray(edge)) {
@@ -61,7 +61,7 @@ function edgePoints(edge, nodes) {
   return a && b ? { a, b } : null;
 }
 
-// Heading: angka radian (0 = utara, searah jarum jam) atau vektor {x, z}.
+// Heading: angka radian
 function headingToAngle(heading) {
   if (typeof heading === 'number') return heading;
   const p = normPoint(heading);
@@ -96,11 +96,11 @@ export function createHud() {
     speed: $('speed'),
   };
 
-  // Minimap harus di kiri bawah (tesis §5), di atas bar HP/AR/uang. Di
-  // index.html canvas #minimap berada DI LUAR #minimap-wrap (yang memosisikan
-  // bar), sehingga canvas jatuh statis di pojok kiri atas. Pindahkan canvas
-  // menjadi anak pertama wrap — persis struktur yang dimaksud peer — supaya
-  // canvas duduk di atas bar tanpa menimpa apa pun.
+  // Minimap harus di kiri
+  // index.html canvas #mi
+  // bar), sehingga canvas
+  // menjadi anak pertama
+  // canvas duduk di atas
   if (el.minimap) {
     try {
       const wrap = document.getElementById('minimap-wrap');
@@ -108,11 +108,11 @@ export function createHud() {
         wrap.insertBefore(el.minimap, wrap.firstChild);
       }
     } catch {
-      // Pemindahan gagal: biarkan apa adanya.
+      // Pemindahan gagal:
     }
   }
 
-  // Nilai terakhir yang sudah ditulis ke DOM — tulis ulang hanya bila berubah.
+  // Nilai terakhir yang
   const last = {
     health: null,
     armor: null,
@@ -135,8 +135,8 @@ export function createHud() {
 
   const mm = el.minimap ? el.minimap.getContext('2d') : null;
 
-  // Bar memakai pola track + fill: #health-bar adalah track-nya, div di
-  // dalamnya adalah fill-nya. Set lebar fill, bukan track.
+  // Bar memakai pola trac
+  // dalamnya adalah fill-
   function setBar(barEl, textEl, pct, label) {
     if (!barEl && !textEl) return;
     const p = clamp(Math.round(pct), 0, 100);
@@ -155,7 +155,7 @@ export function createHud() {
     const now = performance.now();
     const playerPos = normPoint(data.playerPos);
     if (!playerPos) return;
-    // Gambar ulang minimap paling cepat tiap 100 ms, atau saat pemain bergerak jauh.
+    // Gambar ulang minima
     if (
       now - lastMinimapAt < 100 &&
       lastMinimapPlayer &&
@@ -173,7 +173,7 @@ export function createHud() {
     const r = Math.min(w, h) / 2 - 2;
     const scale = r / MINIMAP_RANGE;
     const toX = (x) => cx + (x - playerPos.x) * scale;
-    // Utara di atas: z dunia yang makin besar = selatan = ke bawah layar.
+    // Utara di atas: z du
     const toY = (z) => cy + (z - playerPos.z) * scale;
     const inView = (x, z) => {
       const dx = toX(x) - cx;
@@ -187,11 +187,11 @@ export function createHud() {
     mm.arc(cx, cy, r, 0, Math.PI * 2);
     mm.clip();
 
-    // Latar navy gelap khas HUD.
+    // Latar navy gelap kh
     mm.fillStyle = 'rgba(10, 16, 32, 0.85)';
     mm.fillRect(0, 0, w, h);
 
-    // Jalan dari graph yang sama dengan AI — peta tidak pernah berbohong.
+    // Jalan dari graph ya
     const graph = data.graph;
     if (graph && Array.isArray(graph.edges)) {
       mm.strokeStyle = '#8b93a3';
@@ -214,7 +214,7 @@ export function createHud() {
       mm.fillRect(toX(safe.x) - 4, toY(safe.z) - 4, 8, 8);
     }
 
-    // Marker misi: belah ketupat kuning + cincin berdenyut.
+    // Marker misi: belah
     const marker = normPoint(data.missionMarker);
     if (marker && inView(marker.x, marker.z)) {
       const mx = toX(marker.x);
@@ -235,7 +235,7 @@ export function createHud() {
       mm.fill();
     }
 
-    // Polisi biru — hanya saat wanted aktif (tesis §5).
+    // Polisi biru — hanya
     if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
       mm.fillStyle = '#4f8ef7';
       for (const u of data.policeUnits) {
@@ -248,7 +248,7 @@ export function createHud() {
       }
     }
 
-    // Pemain: panah kuning di tengah, menghadap sesuai heading.
+    // Pemain: panah kunin
     mm.save();
     mm.translate(cx, cy);
     mm.rotate(headingToAngle(data.playerHeading));
@@ -267,7 +267,7 @@ export function createHud() {
 
     mm.restore();
 
-    // Bingkai bundar + ikon utara (N) tetap di atas.
+    // Bingkai bundar + ik
     mm.strokeStyle = 'rgba(238, 241, 245, 0.9)';
     mm.lineWidth = 2;
     mm.beginPath();
@@ -280,18 +280,18 @@ export function createHud() {
     mm.fillText('N', cx, 4);
   }
 
-  // Normalisasi dua bentuk state: bentuk kontrak (nested minimap, playerHealth,
-  // objectiveText, vehicleName, speedKmh) dan bentuk yang dipakai main.js
-  // (flat: health, objective, vehicle, speed, graph, police, playerPos,
-  // playerHeading, missionMarker). Keduanya diterima apa adanya.
+  // Normalisasi dua bentu
+  // objectiveText, vehicl
+  // (flat: health, object
+  // playerHeading, missio
   function normalize(raw) {
     const mm = raw.minimap || {};
     const policeUnits = mm.policeUnits ?? raw.policeUnits ?? (Array.isArray(raw.police) ? raw.police : []);
     const wanted = raw.wanted ?? 0;
     let escaping = raw.wantedEscaping;
     if (typeof escaping !== 'boolean') {
-      // Turunan dari tesis §4: timer lepas berjalan saat tidak ada polisi yang
-      // melihat pemain (unit punya flag canSee).
+      // Turunan dari tesi
+      // melihat pemain (u
       escaping =
         wanted > 0 &&
         Array.isArray(policeUnits) &&
@@ -335,7 +335,7 @@ export function createHud() {
       last.health = state.health;
       setBar(el.healthBar, el.healthText, state.health, String(Math.round(state.health)));
       if (el.healthBar) {
-        // Berkedip merah halus saat health rendah (tesis §5).
+        // Berkedip merah
         el.healthBar.classList.toggle('low', state.health < 25);
       }
     }
@@ -349,7 +349,7 @@ export function createHud() {
       last.money = state.money;
       if (el.money) {
         el.money.textContent = formatRupiah(state.money);
-        // Kilas singkat saat uang berubah (bayaran misi / denda).
+        // Kilas singkat s
         el.money.classList.remove('flash');
         void el.money.offsetWidth;
         el.money.classList.add('flash');
@@ -363,9 +363,9 @@ export function createHud() {
         last.wanted = wanted;
         last.escaping = escaping;
         if (el.wantedStars) {
-          // Span per bintang supaya CSS .off (redup) dan .hot (berkedip)
-          // dari index.html bekerja; teks ★/☆ tetap jadi isi bintangnya.
-          // Animasi kedip jalan sendiri via CSS — JS tidak perlu fase kedip.
+          // Span per bint
+          // dari index.ht
+          // Animasi kedip
           el.wantedStars.textContent = '';
           for (let i = 0; i < MAX_WANTED; i += 1) {
             const span = document.createElement('span');
@@ -388,7 +388,7 @@ export function createHud() {
       last.objectiveText = state.objectiveText;
       if (el.objectiveText) el.objectiveText.textContent = state.objectiveText;
     }
-    // Jarak ke marker misi, dihitung dari state bila ada.
+    // Jarak ke marker mis
     let distanceText = '';
     {
       const pp = normPoint(state.minimap.playerPos);
@@ -406,7 +406,7 @@ export function createHud() {
         last.objectiveTitle || last.objectiveText ? 'block' : 'none';
     }
 
-    // Panel kendaraan: nama + bar kesehatan; armor digantikan bar ini saat mengemudi.
+    // Panel kendaraan: na
     const driving = typeof state.vehicleName === 'string' && state.vehicleName.length > 0;
     if (state.vehicleName !== last.vehicleName) {
       last.vehicleName = state.vehicleName || null;
@@ -417,12 +417,12 @@ export function createHud() {
       if (el.vehicleHealthBar) {
         setBar(el.vehicleHealthBar, el.vehicleHealthText, state.vehicleHealth, String(Math.round(state.vehicleHealth)));
       } else if (el.vehicleHealthText) {
-        // Tanpa elemen bar (index.html memakai <p>): tulis sebagai teks.
+        // Tanpa elemen ba
         el.vehicleHealthText.textContent = 'Kesehatan ' + Math.round(state.vehicleHealth) + '%';
       }
     }
     if (el.vehiclePanel) {
-      // CSS #vehicle-panel display:none — '' tidak cukup, harus 'block'.
+      // CSS #vehicle-pane
       el.vehiclePanel.style.display = driving ? 'block' : 'none';
     }
 
@@ -456,9 +456,9 @@ export function createHud() {
   }
 
   function showMenu(name) {
-    // Menu memakai .menu{display:none} + .menu.open{display:flex} di CSS —
-    // style.display='' saja TIDAK cukup (jatuh ke display:none stylesheet).
-    // Set display eksplisit + kelola class 'open' supaya konsisten.
+    // Menu memakai .menu{
+    // style.display='' sa
+    // Set display eksplis
     const show = (node, on) => {
       if (!node) return;
       node.style.display = on ? 'flex' : 'none';
@@ -468,7 +468,7 @@ export function createHud() {
     show(el.menuPause, name === 'pause');
     show(el.menuControls, name === 'controls');
     last.menu = name;
-    // Fokus ke tombol pertama layar yang dibuka (game-ui-ux: focus on open).
+    // Fokus ke tombol per
     const visible =
       name === 'title' ? el.menuTitle : name === 'pause' ? el.menuPause : name === 'controls' ? el.menuControls : null;
     if (visible) {
@@ -476,7 +476,7 @@ export function createHud() {
         const btn = visible.querySelector('button');
         if (btn) btn.focus();
       } catch {
-        // Fokus gagal bukan alasan HUD mati.
+        // Fokus gagal buk
       }
     }
   }
@@ -488,19 +488,19 @@ export function createHud() {
   function toast(msg) {
     if (!el.toastEl || typeof msg !== 'string' || !msg) return;
     el.toastEl.textContent = msg;
-    el.toastEl.style.display = 'block'; // CSS #toast display:none — '' tidak cukup
+    el.toastEl.style.display = 'block'; // C
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       el.toastEl.style.display = 'none';
     }, 3000);
   }
 
-  // --- Tombol menu: hanya memicu CustomEvent, tidak pernah memanggil main.js ---
+  // --- Tombol menu: hany
   function fire(name, detail) {
     try {
       window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
     } catch {
-      // Event gagal bukan alasan HUD mati.
+      // Event gagal bukan
     }
   }
 
