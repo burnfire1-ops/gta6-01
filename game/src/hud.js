@@ -1,0 +1,552 @@
+// HUD Teluk Cahaya — DOM-based, event-driven.
+// Dibangun dari tesis §5: minimap bundar kiri bawah (utara di atas, digambar dari
+// data graph jalan yang sama dengan AI), health/armor di bawah minimap, uang,
+// wanted stars kanan atas, panel objektif kiri atas, panel kendaraan saat mengemudi,
+// dan menu sebagai stack (title / pause). Semua teks Indonesia.
+//
+// Kontrak: createHud() -> { update(state), setObjective(text), showMenu(name),
+// hideMenus(), toast(msg) }.
+// update(state) dipanggil tiap frame oleh main.js, tapi hanya menulis DOM saat
+// nilainya berubah (cache nilai terakhir) — sesuai skill game-ui-ux: HUD tidak
+// polling buta, ia bereaksi terhadap perubahan.
+// Semua elemen dicari dengan getElementById dan BOLEH tidak ada (null-safe):
+// index.html ditulis subagent lain dan mungkin belum lengkap saat modul ini dites.
+
+const STAR_FULL = '★';
+const STAR_EMPTY = '☆';
+const MAX_WANTED = 5;
+
+// Jarak dunia (meter game) yang terlihat dari tepi minimap ke pusat.
+const MINIMAP_RANGE = 140;
+
+function clamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+function formatRupiah(n) {
+  const v = Math.round(Number(n) || 0);
+  return 'Rp ' + v.toLocaleString('id-ID');
+}
+
+function formatJam(timeHours) {
+  const h = Math.floor(Number(timeHours) || 0) % 24;
+  const m = Math.floor(((Number(timeHours) || 0) % 1) * 60);
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+// Normalisasi satu titik dunia -> {x, z}. Graph bisa memakai {x,z} atau {x,y}.
+function normPoint(p) {
+  if (!p || typeof p !== 'object') return null;
+  const x = typeof p.x === 'number' ? p.x : 0;
+  const z = typeof p.z === 'number' ? p.z : typeof p.y === 'number' ? p.y : 0;
+  return { x, z };
+}
+
+// Satu ujung edge bisa berupa indeks node atau titik langsung.
+function resolveEndpoint(end, nodes) {
+  if (typeof end === 'number') return normPoint(nodes ? nodes[end] : null);
+  return normPoint(end);
+}
+
+// Ambil {a, b} (titik) dari satu edge, apa pun bentuk penyimpanannya.
+function edgePoints(edge, nodes) {
+  if (!edge) return null;
+  if (Array.isArray(edge)) {
+    const a = resolveEndpoint(edge[0], nodes);
+    const b = resolveEndpoint(edge[1], nodes);
+    return a && b ? { a, b } : null;
+  }
+  const a = resolveEndpoint(edge.a ?? edge.from ?? edge.n1 ?? edge.u ?? edge.start, nodes);
+  const b = resolveEndpoint(edge.b ?? edge.to ?? edge.n2 ?? edge.v ?? edge.end, nodes);
+  return a && b ? { a, b } : null;
+}
+
+// Heading: angka radian (0 = utara, searah jarum jam) atau vektor {x, z}.
+function headingToAngle(heading) {
+  if (typeof heading === 'number') return heading;
+  const p = normPoint(heading);
+  if (!p) return 0;
+  return Math.atan2(p.x, -p.z);
+}
+
+export function createHud() {
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    hud: $('hud'),
+    minimap: $('minimap'),
+    healthBar: $('health-bar'),
+    healthText: $('health-text'),
+    armorBar: $('armor-bar'),
+    armorText: $('armor-text'),
+    wantedStars: $('wanted-stars'),
+    money: $('money'),
+    objectivePanel: $('objective-panel'),
+    objectiveTitle: $('objective-title'),
+    objectiveText: $('objective-text'),
+    objectiveDistance: $('objective-distance'),
+    vehiclePanel: $('vehicle-panel'),
+    vehicleName: $('vehicle-name'),
+    vehicleHealthBar: $('vehicle-health-bar'),
+    vehicleHealthText: $('vehicle-health-text') || $('vehicle-health'),
+    menuTitle: $('menu-title'),
+    menuPause: $('menu-pause'),
+    menuControls: $('menu-controls'),
+    toastEl: $('toast'),
+    clock: $('clock'),
+    speed: $('speed'),
+  };
+
+  // Minimap harus di kiri bawah (tesis §5), di atas bar HP/AR/uang. Di
+  // index.html canvas #minimap berada DI LUAR #minimap-wrap (yang memosisikan
+  // bar), sehingga canvas jatuh statis di pojok kiri atas. Pindahkan canvas
+  // menjadi anak pertama wrap — persis struktur yang dimaksud peer — supaya
+  // canvas duduk di atas bar tanpa menimpa apa pun.
+  if (el.minimap) {
+    try {
+      const wrap = document.getElementById('minimap-wrap');
+      if (wrap && el.minimap.parentElement !== wrap) {
+        wrap.insertBefore(el.minimap, wrap.firstChild);
+      }
+    } catch {
+      // Pemindahan gagal: biarkan apa adanya.
+    }
+  }
+
+  // Nilai terakhir yang sudah ditulis ke DOM — tulis ulang hanya bila berubah.
+  const last = {
+    health: null,
+    armor: null,
+    money: null,
+    wanted: null,
+    escaping: null,
+    blinkPhase: null,
+    objectiveTitle: null,
+    objectiveText: null,
+    objectiveDistance: null,
+    vehicleName: null,
+    vehicleHealth: null,
+    timeHours: null,
+    speedKmh: null,
+    menu: null,
+  };
+  let lastMinimapAt = 0;
+  let lastMinimapPlayer = null;
+  let toastTimer = null;
+
+  const mm = el.minimap ? el.minimap.getContext('2d') : null;
+
+  // Bar memakai pola track + fill: #health-bar adalah track-nya, div di
+  // dalamnya adalah fill-nya. Set lebar fill, bukan track.
+  function setBar(barEl, textEl, pct, label) {
+    if (!barEl && !textEl) return;
+    const p = clamp(Math.round(pct), 0, 100);
+    if (barEl) {
+      const fill = barEl.querySelector ? barEl.querySelector(':scope > div') : null;
+      const target = fill || barEl;
+      if (target.tagName === 'PROGRESS') target.value = p;
+      else target.style.width = p + '%';
+      barEl.setAttribute('aria-valuenow', String(p));
+    }
+    if (textEl) textEl.textContent = label != null ? label : String(p);
+  }
+
+  function drawMinimap(data) {
+    if (!mm || !el.minimap || !data) return;
+    const now = performance.now();
+    const playerPos = normPoint(data.playerPos);
+    if (!playerPos) return;
+    // Gambar ulang minimap paling cepat tiap 100 ms, atau saat pemain bergerak jauh.
+    if (
+      now - lastMinimapAt < 100 &&
+      lastMinimapPlayer &&
+      Math.hypot(playerPos.x - lastMinimapPlayer.x, playerPos.z - lastMinimapPlayer.z) < 1
+    ) {
+      return;
+    }
+    lastMinimapAt = now;
+    lastMinimapPlayer = playerPos;
+
+    const w = el.minimap.width || 180;
+    const h = el.minimap.height || 180;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 - 2;
+    const scale = r / MINIMAP_RANGE;
+    const toX = (x) => cx + (x - playerPos.x) * scale;
+    // Utara di atas: z dunia yang makin besar = selatan = ke bawah layar.
+    const toY = (z) => cy + (z - playerPos.z) * scale;
+    const inView = (x, z) => {
+      const dx = toX(x) - cx;
+      const dy = toY(z) - cy;
+      return dx * dx + dy * dy <= r * r;
+    };
+
+    mm.clearRect(0, 0, w, h);
+    mm.save();
+    mm.beginPath();
+    mm.arc(cx, cy, r, 0, Math.PI * 2);
+    mm.clip();
+
+    // Latar navy gelap khas HUD.
+    mm.fillStyle = 'rgba(10, 16, 32, 0.85)';
+    mm.fillRect(0, 0, w, h);
+
+    // Jalan dari graph yang sama dengan AI — peta tidak pernah berbohong.
+    const graph = data.graph;
+    if (graph && Array.isArray(graph.edges)) {
+      mm.strokeStyle = '#8b93a3';
+      mm.lineWidth = 2;
+      mm.beginPath();
+      for (const edge of graph.edges) {
+        const pts = edgePoints(edge, graph.nodes);
+        if (!pts) continue;
+        if (!inView(pts.a.x, pts.a.z) && !inView(pts.b.x, pts.b.z)) continue;
+        mm.moveTo(toX(pts.a.x), toY(pts.a.z));
+        mm.lineTo(toX(pts.b.x), toY(pts.b.z));
+      }
+      mm.stroke();
+    }
+
+    // Safehouse hijau.
+    const safe = normPoint(data.safehouse);
+    if (safe && inView(safe.x, safe.z)) {
+      mm.fillStyle = '#2ecc71';
+      mm.fillRect(toX(safe.x) - 4, toY(safe.z) - 4, 8, 8);
+    }
+
+    // Marker misi: belah ketupat kuning + cincin berdenyut.
+    const marker = normPoint(data.missionMarker);
+    if (marker && inView(marker.x, marker.z)) {
+      const mx = toX(marker.x);
+      const my = toY(marker.z);
+      const pulse = 6 + 3 * Math.sin(now / 300);
+      mm.strokeStyle = 'rgba(242, 201, 76, 0.8)';
+      mm.lineWidth = 1.5;
+      mm.beginPath();
+      mm.arc(mx, my, pulse + 4, 0, Math.PI * 2);
+      mm.stroke();
+      mm.fillStyle = '#f2c94c';
+      mm.beginPath();
+      mm.moveTo(mx, my - 6);
+      mm.lineTo(mx + 5, my);
+      mm.lineTo(mx, my + 6);
+      mm.lineTo(mx - 5, my);
+      mm.closePath();
+      mm.fill();
+    }
+
+    // Polisi biru — hanya saat wanted aktif (tesis §5).
+    if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
+      mm.fillStyle = '#4f8ef7';
+      for (const u of data.policeUnits) {
+        const p = normPoint(u);
+        if (p && inView(p.x, p.z)) {
+          mm.beginPath();
+          mm.arc(toX(p.x), toY(p.z), 3.5, 0, Math.PI * 2);
+          mm.fill();
+        }
+      }
+    }
+
+    // Pemain: panah kuning di tengah, menghadap sesuai heading.
+    mm.save();
+    mm.translate(cx, cy);
+    mm.rotate(headingToAngle(data.playerHeading));
+    mm.fillStyle = '#f2c94c';
+    mm.strokeStyle = '#11141b';
+    mm.lineWidth = 1;
+    mm.beginPath();
+    mm.moveTo(0, -9);
+    mm.lineTo(6, 7);
+    mm.lineTo(0, 3);
+    mm.lineTo(-6, 7);
+    mm.closePath();
+    mm.fill();
+    mm.stroke();
+    mm.restore();
+
+    mm.restore();
+
+    // Bingkai bundar + ikon utara (N) tetap di atas.
+    mm.strokeStyle = 'rgba(238, 241, 245, 0.9)';
+    mm.lineWidth = 2;
+    mm.beginPath();
+    mm.arc(cx, cy, r, 0, Math.PI * 2);
+    mm.stroke();
+    mm.fillStyle = '#eef1f5';
+    mm.font = 'bold 11px system-ui, sans-serif';
+    mm.textAlign = 'center';
+    mm.textBaseline = 'top';
+    mm.fillText('N', cx, 4);
+  }
+
+  // Normalisasi dua bentuk state: bentuk kontrak (nested minimap, playerHealth,
+  // objectiveText, vehicleName, speedKmh) dan bentuk yang dipakai main.js
+  // (flat: health, objective, vehicle, speed, graph, police, playerPos,
+  // playerHeading, missionMarker). Keduanya diterima apa adanya.
+  function normalize(raw) {
+    const mm = raw.minimap || {};
+    const policeUnits = mm.policeUnits ?? raw.policeUnits ?? (Array.isArray(raw.police) ? raw.police : []);
+    const wanted = raw.wanted ?? 0;
+    let escaping = raw.wantedEscaping;
+    if (typeof escaping !== 'boolean') {
+      // Turunan dari tesis §4: timer lepas berjalan saat tidak ada polisi yang
+      // melihat pemain (unit punya flag canSee).
+      escaping =
+        wanted > 0 &&
+        Array.isArray(policeUnits) &&
+        policeUnits.length > 0 &&
+        policeUnits.every((u) => u && u.canSee === false);
+    }
+    return {
+      health: raw.playerHealth ?? raw.health,
+      armor: raw.armor,
+      money: raw.money,
+      wanted,
+      escaping: !!escaping,
+      missionTitle:
+        raw.missionTitle ?? (raw.mission && raw.mission.title) ?? (mm.missionTitle || null),
+      objectiveText: raw.objectiveText ?? raw.objective,
+      vehicleName: raw.vehicleName ?? raw.vehicle,
+      vehicleHealth: raw.vehicleHealth,
+      timeHours: raw.timeHours,
+      speedKmh:
+        typeof raw.speedKmh === 'number'
+          ? raw.speedKmh
+          : typeof raw.speed === 'number'
+            ? raw.speed * 3.6
+            : undefined,
+      minimap: {
+        graph: mm.graph ?? raw.graph,
+        playerPos: mm.playerPos ?? raw.playerPos,
+        playerHeading: mm.playerHeading ?? raw.playerHeading,
+        policeUnits,
+        missionMarker: mm.missionMarker ?? raw.missionMarker,
+        safehouse: mm.safehouse ?? raw.safehouse,
+      },
+    };
+  }
+
+  function update(rawState) {
+    if (!rawState || typeof rawState !== 'object') return;
+    const state = normalize(rawState);
+
+    if (typeof state.health === 'number' && state.health !== last.health) {
+      last.health = state.health;
+      setBar(el.healthBar, el.healthText, state.health, String(Math.round(state.health)));
+      if (el.healthBar) {
+        // Berkedip merah halus saat health rendah (tesis §5).
+        el.healthBar.classList.toggle('low', state.health < 25);
+      }
+    }
+
+    if (typeof state.armor === 'number' && state.armor !== last.armor) {
+      last.armor = state.armor;
+      setBar(el.armorBar, el.armorText, state.armor, String(Math.round(state.armor)));
+    }
+
+    if (typeof state.money === 'number' && state.money !== last.money) {
+      last.money = state.money;
+      if (el.money) {
+        el.money.textContent = formatRupiah(state.money);
+        // Kilas singkat saat uang berubah (bayaran misi / denda).
+        el.money.classList.remove('flash');
+        void el.money.offsetWidth;
+        el.money.classList.add('flash');
+      }
+    }
+
+    {
+      const wanted = clamp(Math.round(state.wanted || 0), 0, MAX_WANTED);
+      const escaping = state.escaping;
+      if (wanted !== last.wanted || escaping !== last.escaping) {
+        last.wanted = wanted;
+        last.escaping = escaping;
+        if (el.wantedStars) {
+          // Span per bintang supaya CSS .off (redup) dan .hot (berkedip)
+          // dari index.html bekerja; teks ★/☆ tetap jadi isi bintangnya.
+          // Animasi kedip jalan sendiri via CSS — JS tidak perlu fase kedip.
+          el.wantedStars.textContent = '';
+          for (let i = 0; i < MAX_WANTED; i += 1) {
+            const span = document.createElement('span');
+            const filled = i < wanted;
+            span.textContent = filled ? STAR_FULL : STAR_EMPTY;
+            span.className = filled ? (escaping ? 'hot' : '') : 'off';
+            el.wantedStars.appendChild(span);
+          }
+          el.wantedStars.setAttribute('aria-label', `Wanted level ${wanted} dari ${MAX_WANTED}`);
+        }
+      }
+    }
+
+    const missionTitle = typeof state.missionTitle === 'string' ? state.missionTitle : null;
+    if (missionTitle !== last.objectiveTitle) {
+      last.objectiveTitle = missionTitle;
+      if (el.objectiveTitle) el.objectiveTitle.textContent = missionTitle || '';
+    }
+    if (typeof state.objectiveText === 'string' && state.objectiveText !== last.objectiveText) {
+      last.objectiveText = state.objectiveText;
+      if (el.objectiveText) el.objectiveText.textContent = state.objectiveText;
+    }
+    // Jarak ke marker misi, dihitung dari state bila ada.
+    let distanceText = '';
+    {
+      const pp = normPoint(state.minimap.playerPos);
+      const mk = normPoint(state.minimap.missionMarker);
+      if (pp && mk) {
+        distanceText = Math.round(Math.hypot(mk.x - pp.x, mk.z - pp.z)) + ' m';
+      }
+    }
+    if (distanceText !== last.objectiveDistance) {
+      last.objectiveDistance = distanceText;
+      if (el.objectiveDistance) el.objectiveDistance.textContent = distanceText;
+    }
+    if (el.objectivePanel) {
+      el.objectivePanel.style.display =
+        last.objectiveTitle || last.objectiveText ? 'block' : 'none';
+    }
+
+    // Panel kendaraan: nama + bar kesehatan; armor digantikan bar ini saat mengemudi.
+    const driving = typeof state.vehicleName === 'string' && state.vehicleName.length > 0;
+    if (state.vehicleName !== last.vehicleName) {
+      last.vehicleName = state.vehicleName || null;
+      if (el.vehicleName) el.vehicleName.textContent = state.vehicleName || '';
+    }
+    if (typeof state.vehicleHealth === 'number' && state.vehicleHealth !== last.vehicleHealth) {
+      last.vehicleHealth = state.vehicleHealth;
+      if (el.vehicleHealthBar) {
+        setBar(el.vehicleHealthBar, el.vehicleHealthText, state.vehicleHealth, String(Math.round(state.vehicleHealth)));
+      } else if (el.vehicleHealthText) {
+        // Tanpa elemen bar (index.html memakai <p>): tulis sebagai teks.
+        el.vehicleHealthText.textContent = 'Kesehatan ' + Math.round(state.vehicleHealth) + '%';
+      }
+    }
+    if (el.vehiclePanel) {
+      // CSS #vehicle-panel display:none — '' tidak cukup, harus 'block'.
+      el.vehiclePanel.style.display = driving ? 'block' : 'none';
+    }
+
+    if (typeof state.timeHours === 'number' && state.timeHours !== last.timeHours) {
+      last.timeHours = state.timeHours;
+      if (el.clock) el.clock.textContent = formatJam(state.timeHours);
+    }
+    if (typeof state.speedKmh === 'number' && Math.round(state.speedKmh) !== last.speedKmh) {
+      last.speedKmh = Math.round(state.speedKmh);
+      if (el.speed) el.speed.textContent = last.speedKmh + ' km/jam';
+    }
+
+    if (state.minimap) {
+      drawMinimap({
+        graph: state.minimap.graph,
+        playerPos: state.minimap.playerPos,
+        playerHeading: state.minimap.playerHeading,
+        policeUnits: state.minimap.policeUnits,
+        missionMarker: state.minimap.missionMarker,
+        safehouse: state.minimap.safehouse,
+        wanted: state.wanted || 0,
+      });
+    }
+  }
+
+  function setObjective(text) {
+    if (typeof text !== 'string') return;
+    last.objectiveText = text;
+    if (el.objectiveText) el.objectiveText.textContent = text;
+    if (el.objectivePanel) el.objectivePanel.style.display = text ? 'block' : 'none';
+  }
+
+  function showMenu(name) {
+    // Menu memakai .menu{display:none} + .menu.open{display:flex} di CSS —
+    // style.display='' saja TIDAK cukup (jatuh ke display:none stylesheet).
+    // Set display eksplisit + kelola class 'open' supaya konsisten.
+    const show = (node, on) => {
+      if (!node) return;
+      node.style.display = on ? 'flex' : 'none';
+      if (node.classList) node.classList.toggle('open', on);
+    };
+    show(el.menuTitle, name === 'title');
+    show(el.menuPause, name === 'pause');
+    show(el.menuControls, name === 'controls');
+    last.menu = name;
+    // Fokus ke tombol pertama layar yang dibuka (game-ui-ux: focus on open).
+    const visible =
+      name === 'title' ? el.menuTitle : name === 'pause' ? el.menuPause : name === 'controls' ? el.menuControls : null;
+    if (visible) {
+      try {
+        const btn = visible.querySelector('button');
+        if (btn) btn.focus();
+      } catch {
+        // Fokus gagal bukan alasan HUD mati.
+      }
+    }
+  }
+
+  function hideMenus() {
+    showMenu('none');
+  }
+
+  function toast(msg) {
+    if (!el.toastEl || typeof msg !== 'string' || !msg) return;
+    el.toastEl.textContent = msg;
+    el.toastEl.style.display = 'block'; // CSS #toast display:none — '' tidak cukup
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.toastEl.style.display = 'none';
+    }, 3000);
+  }
+
+  // --- Tombol menu: hanya memicu CustomEvent, tidak pernah memanggil main.js ---
+  function fire(name, detail) {
+    try {
+      window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+    } catch {
+      // Event gagal bukan alasan HUD mati.
+    }
+  }
+
+  function wireMenuButtons(menuEl, mapping) {
+    if (!menuEl) return;
+    const buttons = menuEl.querySelectorAll('button');
+    buttons.forEach((btn) => {
+      const action = btn.getAttribute('data-action') || '';
+      const label = (btn.textContent || '').toLowerCase();
+      let hit = mapping[action];
+      if (!hit) {
+        for (const key of Object.keys(mapping)) {
+          if (label.includes(key)) {
+            hit = mapping[key];
+            break;
+          }
+        }
+      }
+      if (!hit) return;
+      btn.addEventListener('click', () => {
+        fire(hit.event, hit.detail);
+      });
+    });
+  }
+
+  wireMenuButtons(el.menuTitle, {
+    new: { event: 'telukcahaya:start', detail: { continue: false } },
+    baru: { event: 'telukcahaya:start', detail: { continue: false } },
+    continue: { event: 'telukcahaya:start', detail: { continue: true } },
+    lanjut: { event: 'telukcahaya:start', detail: { continue: true } },
+    controls: { event: 'telukcahaya:controls', detail: {} },
+    kontrol: { event: 'telukcahaya:controls', detail: {} },
+  });
+  wireMenuButtons(el.menuPause, {
+    resume: { event: 'telukcahaya:resume', detail: {} },
+    lanjut: { event: 'telukcahaya:resume', detail: {} },
+    save: { event: 'telukcahaya:save', detail: {} },
+    simpan: { event: 'telukcahaya:save', detail: {} },
+    load: { event: 'telukcahaya:load', detail: {} },
+    muat: { event: 'telukcahaya:load', detail: {} },
+    quit: { event: 'telukcahaya:quit', detail: {} },
+    keluar: { event: 'telukcahaya:quit', detail: {} },
+    judul: { event: 'telukcahaya:quit', detail: {} },
+    controls: { event: 'telukcahaya:controls', detail: {} },
+    kontrol: { event: 'telukcahaya:controls', detail: {} },
+  });
+
+  return { update, setObjective, showMenu, hideMenus, toast };
+}

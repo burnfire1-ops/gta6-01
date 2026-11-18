@@ -1,61 +1,105 @@
-// Every tuning number and colour in one place. The playfield is a fixed 1280x720 logical area;
-// the renderer scales it to the window, so no rule below depends on the screen size.
+// Every tuning number and colour in one place. Teluk Cahaya is a ~440x440 coastal
+// city on a road grid (roads every 40 units) with four districts. No rule below
+// depends on the screen size.
 
-export const FIELD = { width: 1280, height: 720, groundY: 664 };
+export const SEED = 1337;
 
-/** The simulation's fixed step, in seconds: 60 updates a second whatever the display's rate. */
-export const STEP = 1 / 60;
+/** One in-game day lasts 12 real minutes. */
+export const DAY_LENGTH_SECONDS = 720;
+
+export const CITY = {
+  half: 220,
+  size: 440,
+  roadSpacing: 40,
+  roadHalfWidth: 3.5,
+  /** West edge of the land; the sea starts here. */
+  seaEdgeX: -220,
+  /** Lighthouse island at the end of the harbour bridge. */
+  lighthouse: { x: -300, z: 120 },
+  bridge: { x: -260, z: 120 },
+};
+
+export const DISTRICTS = {
+  artdeco: { name: 'Boulevard Art-Deco', color: 0xff9a7a },
+  neon: { name: 'Distrik Neon', color: 0xff5da2 },
+  port: { name: 'Pelabuhan & Industri', color: 0x8a7f72 },
+  residential: { name: 'Bukit Residensial', color: 0x9fc98a },
+};
+
+/** Pastel tropical palette (thesis §3): coral, sea teal, sun yellow, night navy, neon pink. */
+export const PALETTE = {
+  coral: 0xff9a7a,
+  coralDeep: 0xe86a5a,
+  tealSea: 0x2ec4b6,
+  tealDeep: 0x0e7c86,
+  sunYellow: 0xffd166,
+  nightNavy: 0x101a33,
+  neonPink: 0xff5da2,
+  neonCyan: 0x4de3ff,
+  sand: 0xe8d9b0,
+  grass: 0xa8d08d,
+  asphalt: 0x333a4a,
+  sidewalk: 0xcfc4ae,
+  facadeCream: 0xffe8c9,
+  glassTeal: 0x7fd4d0,
+  concrete: 0x9a938a,
+  hudPanel: '#101a33',
+  hudText: '#f4f1e6',
+  hudMuted: '#9fb3c8',
+};
 
 export const PLAYER = {
-  width: 72,
-  height: 24,
-  speed: 560,
-  invulnerable: 1.5,
+  walkSpeed: 4,
+  runSpeed: 7.5,
+  jumpSpeed: 8,
+  gravity: 22,
+  radius: 0.6,
+  health: 100,
+  maxHealth: 100,
+  armor: 0,
+  maxArmor: 100,
+  /** How fast the on-foot heading turns toward the camera yaw, per second. */
+  turnRate: 12,
 };
 
-export const LIVES = 3;
-
-export const BLOCK = {
-  minWidth: 40,
-  maxWidth: 110,
-  height: 36,
-  speed: 240,
-  speedPerLevel: 30,
-  speedJitter: 90,
-  interval: 0.55,
-  intervalScale: 0.88,
-  minInterval: 0.14,
-  dodgePoints: 1,
+export const VEHICLE = {
+  /** Arcade car tuning: accel, braking, top speed per type (units/s). */
+  types: {
+    sedan: { accel: 14, brake: 26, topSpeed: 26, reverseSpeed: 9, color: 0xe8e4d8 },
+    taxi: { accel: 15, brake: 26, topSpeed: 27, reverseSpeed: 9, color: 0xffd166 },
+    van: { accel: 10, brake: 22, topSpeed: 20, reverseSpeed: 8, color: 0x9a938a },
+    pickup: { accel: 13, brake: 24, topSpeed: 24, reverseSpeed: 9, color: 0xc96f4a },
+    sport: { accel: 22, brake: 30, topSpeed: 38, reverseSpeed: 10, color: 0x2ec4b6 },
+    patrol: { accel: 20, brake: 30, topSpeed: 36, reverseSpeed: 10, color: 0x1c2733 },
+  },
+  steerRate: 1.9,
+  /** Police top speed stays just below the player sport car so escape is always possible. */
+  policeTopSpeed: 36,
+  playerTopSpeed: 38,
+  handbrakeGrip: 0.35,
+  damagePerHardHit: 8,
 };
 
-export const COIN = {
-  size: 24,
-  speed: 190,
-  speedPerLevel: 14,
-  interval: 1.4,
-  intervalJitter: 0.8,
-  points: 10,
+/** Police band: how far from the player a pursuit unit may spawn / despawn. */
+export const POLICE = {
+  roadBand: 3.0,
+  spawnMinDist: 45,
+  spawnMaxDist: 90,
+  despawnDist: 140,
+  /** Units per wanted level, index = wanted stars. */
+  unitsPerWanted: [0, 1, 2, 3, 4, 5],
+  /** Seconds out of sight before the escape timer starts, per wanted level. */
+  escapeDelay: [0, 6, 9, 12, 15, 18],
+  catchRadius: 3.5,
 };
 
-/** Seconds of play per level, and the last level: speeds and spawn rates stop growing there. */
-export const LEVEL = { seconds: 12, max: 12 };
-
-/** How many falling things can exist at once; the pool is allocated once, at boot. */
-export const POOL_SIZE = 64;
-
-export const PALETTE = {
-  backdrop: '#11141b',
-  sky: '#1b1f2a',
-  ground: '#2a3040',
-  player: '#4fc3f7',
-  block: '#e5534b',
-  coin: '#f2c94c',
-  panel: '#252b38',
-  text: '#eef1f5',
-  muted: '#8b93a3',
+export const MISSIONS = {
+  total: 8,
+  startMoney: 250,
+  fineOnCaught: 100,
 };
 
 export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 
-/** Where the best score is kept between visits (this browser only). */
-export const BEST_KEY = 'block-dodger.best';
+/** Save slots live in localStorage under these keys (see save.js). */
+export const SAVE_KEY = 'teluk-cahaya.save';

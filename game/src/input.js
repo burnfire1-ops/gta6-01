@@ -1,49 +1,110 @@
-// Keyboard and pointer input. Held keys give a steering direction; one-shot presses (start or
-// restart, pause) are queued as bit flags and taken once by the loop, so a press between two
-// frames is never lost and never counted twice.
+// Named-action input with buffering: held keys give steering axes, discrete
+// presses (interact, jump, attack, pause, confirm) are queued as bit flags and
+// taken once by the loop, so a press between two frames is never lost and
+// never counted twice. Mouse look accumulates while the pointer is locked.
 
 export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;
+export const ACTION_INTERACT = 4;
+export const ACTION_JUMP = 8;
+export const ACTION_HANDBRAKE = 16;
+export const ACTION_ATTACK = 32;
 
-const LEFT = new Set(['ArrowLeft', 'KeyA']);
-const RIGHT = new Set(['ArrowRight', 'KeyD']);
-const CONFIRM = new Set(['Space', 'Enter']);
-const PAUSE = new Set(['KeyP', 'Escape']);
+const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
+const BACK_KEYS = new Set(['KeyS', 'ArrowDown']);
+const LEFT_KEYS = new Set(['KeyA', 'ArrowLeft']);
+const RIGHT_KEYS = new Set(['KeyD', 'ArrowRight']);
+const SPRINT_KEYS = new Set(['ShiftLeft', 'ShiftRight']);
+const INTERACT_KEYS = new Set(['KeyF', 'KeyE']);
+const JUMP_KEYS = new Set(['Space']);
+const PAUSE_KEYS = new Set(['Escape', 'KeyP']);
+const CONFIRM_KEYS = new Set(['Enter', 'NumpadEnter']);
 
-export function createInput(target) {
-  let left = false;
-  let right = false;
+export function createInput(canvas) {
+  const down = new Set();
   let actions = 0;
+  let mouseDX = 0;
+  let mouseDY = 0;
+
+  function press(code) {
+    if (INTERACT_KEYS.has(code)) actions |= ACTION_INTERACT;
+    else if (JUMP_KEYS.has(code)) actions |= ACTION_JUMP | ACTION_HANDBRAKE;
+    else if (PAUSE_KEYS.has(code)) actions |= ACTION_PAUSE;
+    else if (CONFIRM_KEYS.has(code)) actions |= ACTION_CONFIRM;
+  }
 
   window.addEventListener('keydown', (event) => {
-    if (LEFT.has(event.code)) left = true;
-    else if (RIGHT.has(event.code)) right = true;
-    else if (CONFIRM.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_CONFIRM;
-    } else if (PAUSE.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_PAUSE;
-    } else return;
-    event.preventDefault();
+    if (event.repeat) {
+      if (FORWARD_KEYS.has(event.code) || BACK_KEYS.has(event.code)
+        || LEFT_KEYS.has(event.code) || RIGHT_KEYS.has(event.code)) event.preventDefault();
+      return;
+    }
+    down.add(event.code);
+    press(event.code);
+    if (FORWARD_KEYS.has(event.code) || BACK_KEYS.has(event.code)
+      || LEFT_KEYS.has(event.code) || RIGHT_KEYS.has(event.code)
+      || JUMP_KEYS.has(event.code) || INTERACT_KEYS.has(event.code)) {
+      event.preventDefault();
+    }
   });
   window.addEventListener('keyup', (event) => {
-    if (LEFT.has(event.code)) left = false;
-    else if (RIGHT.has(event.code)) right = false;
+    down.delete(event.code);
   });
-  // A key released while the tab is hidden never sends keyup: let go of everything on blur.
+  // A key released while the tab is hidden never sends keyup: let go on blur.
   window.addEventListener('blur', () => {
-    left = false;
-    right = false;
-  });
-  target.addEventListener('pointerdown', () => {
-    actions |= ACTION_CONFIRM;
+    down.clear();
+    mouseDX = 0;
+    mouseDY = 0;
   });
 
+  document.addEventListener('mousemove', (event) => {
+    if (document.pointerLockElement === canvas) {
+      mouseDX += event.movementX || 0;
+      mouseDY += event.movementY || 0;
+    }
+  });
+  // Click the canvas to capture the mouse (orbit look); Esc / pause releases it.
+  canvas.addEventListener('click', () => {
+    if (document.pointerLockElement !== canvas) {
+      canvas.requestPointerLock?.();
+    }
+  });
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 0) actions |= ACTION_ATTACK;
+  });
+
+  function anyDown(set) {
+    for (const code of set) if (down.has(code)) return true;
+    return false;
+  }
+
   return {
-    /** -1 for left, 1 for right, 0 for neither or both. */
-    direction() {
-      return (right ? 1 : 0) - (left ? 1 : 0);
+    /** Steering axes from WASD / arrows: forward +1 (W), strafe +1 (D). */
+    axes: {
+      get forward() {
+        return (anyDown(FORWARD_KEYS) ? 1 : 0) - (anyDown(BACK_KEYS) ? 1 : 0);
+      },
+      get strafe() {
+        return (anyDown(RIGHT_KEYS) ? 1 : 0) - (anyDown(LEFT_KEYS) ? 1 : 0);
+      },
     },
-    /** The one-shot presses since the last call, as ACTION_* flags. */
+    get sprint() {
+      return anyDown(SPRINT_KEYS);
+    },
+    get mouseDX() {
+      return mouseDX;
+    },
+    get mouseDY() {
+      return mouseDY;
+    },
+    resetMouse() {
+      mouseDX = 0;
+      mouseDY = 0;
+    },
+    isDown(code) {
+      return down.has(code);
+    },
+    /** One-shot presses since the last call, as ACTION_* flags (consumed once). */
     takeActions() {
       const taken = actions;
       actions = 0;
