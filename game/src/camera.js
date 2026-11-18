@@ -32,7 +32,6 @@ export function createChaseCamera(camera) {
     const oy = height + Math.sin(pitch) * dist;
     desired.set(target.pos.x + ox, oy, target.pos.z + oz);
 
-    // Spring arm (manual)
     const colliders = target.colliders || [];
     for (const c of colliders) {
       const dx = desired.x - c.x;

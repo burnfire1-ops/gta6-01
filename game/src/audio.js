@@ -1,6 +1,3 @@
-// SFX, Ambience, UI;
-//
-// Kontrak: createAudio()
 
 const CHORDS = {
   Am: [110.0, 130.81, 164.81],
@@ -41,7 +38,6 @@ export function createAudio() {
   let muted = false;
   let masterGainValue = 0.9;
 
-  // --- Bus (dibuat sekal
   function ensure() {
     if (ctx) {
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -168,7 +164,6 @@ export function createAudio() {
     }, 120);
   }
 
-  // --- Mesin: sawtooth +
   function setEngine(rpm01) {
     if (!ctx || !sfxBus) return;
     const rpm = Math.max(0, Math.min(1, Number(rpm01) || 0));
@@ -191,7 +186,6 @@ export function createAudio() {
     engineGain.gain.setTargetAtTime(rpm > 0.02 ? 0.05 + 0.05 * rpm : 0, t, 0.1);
   }
 
-  // --- Sirene: dua nada
   function siren(on) {
     sirenOn = !!on;
     if (!ctx || !sfxBus) return;
@@ -226,7 +220,6 @@ export function createAudio() {
         osc.stop(t + 0.3);
         lfo.stop(t + 0.3);
       } catch {
-        // Sudah berhenti.
       }
     }
     if (musicDuck) {
@@ -234,7 +227,6 @@ export function createAudio() {
     }
   }
 
-  // --- Blip UI: square
   function blip() {
     if (!ctx || !uiBus) return;
     const t = ctx.currentTime;

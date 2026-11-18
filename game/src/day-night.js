@@ -2,7 +2,6 @@
 import * as THREE from 'three';
 import { DAY_LENGTH_SECONDS, PALETTE } from './config.js';
 
-// Sky keyframes: [hour,
 const SKY_KEYS = [
   [0, 0x0d1530],
   [5, 0x1a2340],

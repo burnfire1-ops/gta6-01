@@ -274,7 +274,6 @@ function step(dt) {
     missionMarker: missions.markerPos || null,
   });
 
-  // Audio follows state:
   if (audio.setEngine) {
     const rpm = player.onFoot ? 0 : Math.min(1, player.speed / 38);
     audio.setEngine(rpm);

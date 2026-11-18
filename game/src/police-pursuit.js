@@ -1,6 +1,3 @@
-// FILE PALING PENTING.
-// skill open-world-crime,
-//  - Hysteresis waypoint:
 import * as CFG from './config.js';
 import { clamp, turnToward } from './vehicles.js';
 
@@ -123,7 +120,6 @@ export function createPolice(scene, graph, fleet, rng) {
     return false;
   }
 
-  // ---------- Spawn ----
   function viewDir() {
     const ctx = S.lastCtx;
     const yaw = ctx && typeof ctx.cameraYaw === 'number' ? ctx.cameraYaw
@@ -136,7 +132,6 @@ export function createPolice(scene, graph, fleet, rng) {
     const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
     const vd = viewDir();
     let best = null;
-    // Syarat ketat dulu:
     const tiers = [
       (n) => Math.hypot(n.x - tp.x, n.z - tp.z) > 45
         && ((n.x - tp.x) * vd.x + (n.z - tp.z) * vd.z) / (Math.hypot(n.x - tp.x, n.z - tp.z) || 1) < 0.3,
@@ -232,7 +227,6 @@ export function createPolice(scene, graph, fleet, rng) {
     }
   }
 
-  // ---------- Wanted ---
   function addWanted(n) {
     const before = api.wanted;
     api.wanted = clamp(api.wanted + (n || 1), 0, 5);
@@ -321,7 +315,6 @@ export function createPolice(scene, graph, fleet, rng) {
     else if (unit.car && unit.car.mesh && scene) scene.remove(unit.car.mesh);
   }
 
-  // ---------- Update ---
   function update(dt, ctx) {
     const d = Math.min(Math.max(dt || 0, 0), 0.1);
     if (ctx) S.lastCtx = ctx;

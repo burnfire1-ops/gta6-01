@@ -1,4 +1,3 @@
-// belakang mobil lain,
 import { clamp, turnToward } from './vehicles.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
@@ -89,7 +88,6 @@ export function createTraffic(scene, graph, fleet, rng) {
       const t = car._t;
       if (!t) continue;
 
-      // --- Menepi saat p
       if (wanted > 0 && player && player.pos) {
         const dp = Math.hypot(car.pos.x - player.pos.x, car.pos.z - player.pos.z);
         if (dp < 30 && t.state !== 'pullover') {
@@ -125,7 +123,6 @@ export function createTraffic(scene, graph, fleet, rng) {
         }
       }
 
-      // --- Ikuti rute A*
       if (!t.route.length || t.wp >= t.route.length) newRoute(car);
       if (!t.route.length) { car.speed = 0; continue; }
       const wpNode = nodePos(graph, t.route[t.wp]);
@@ -135,7 +132,6 @@ export function createTraffic(scene, graph, fleet, rng) {
       const dist = Math.hypot(dx, dz);
       if (dist < 3) { t.wp++; continue; }
 
-      // --- Lampu merah:
       let wantSpeed = t.cruise;
       let atRedLight = false;
       if (dist < 14 && graph && typeof graph.trafficLightState === 'function') {
@@ -146,10 +142,8 @@ export function createTraffic(scene, graph, fleet, rng) {
           }
         } catch (e) { /* lampu tidak tersedia -> jalan terus */ }
       }
-      // --- Mobil di depa
       if (carAhead(car)) wantSpeed = 0;
 
-      // --- Anti-macet: t
       if (car.speed < 0.5 && !atRedLight) {
         t.blockedTimer += d;
         if (t.blockedTimer > 2) {

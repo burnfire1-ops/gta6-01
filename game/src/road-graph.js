@@ -1,4 +1,3 @@
-// across a ~440x440 city,
 
 import { CITY } from './config.js';
 

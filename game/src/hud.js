@@ -1,7 +1,3 @@
-// Dibangun dari tesis §5:
-//
-// Kontrak: createHud()
-// hideMenus(), toast(msg)
 
 const STAR_FULL = '★';
 const STAR_EMPTY = '☆';
@@ -36,7 +32,6 @@ function resolveEndpoint(end, nodes) {
   return normPoint(end);
 }
 
-// Ambil {a, b} (titik)
 function edgePoints(edge, nodes) {
   if (!edge) return null;
   if (Array.isArray(edge)) {
@@ -90,7 +85,6 @@ export function createHud() {
         wrap.insertBefore(el.minimap, wrap.firstChild);
       }
     } catch {
-      // Pemindahan gagal:
     }
   }
 
@@ -182,7 +176,6 @@ export function createHud() {
       mm.stroke();
     }
 
-    // Safehouse hijau.
     const safe = normPoint(data.safehouse);
     if (safe && inView(safe.x, safe.z)) {
       mm.fillStyle = '#2ecc71';
@@ -446,7 +439,6 @@ export function createHud() {
     }, 3000);
   }
 
-  // --- Tombol menu: hany
   function fire(name, detail) {
     try {
       window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));

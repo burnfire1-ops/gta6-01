@@ -156,7 +156,6 @@ export function createPlayer(scene, graph, rng) {
       state.speed += (0 - state.speed) * Math.min(1, dt * 10);
     }
 
-    // Jump / gravity.
     const actions = input._actions ?? 0;
     if ((actions & 8) && state._grounded) {
       state._vy = PLAYER.jumpSpeed;
@@ -187,7 +186,6 @@ export function createPlayer(scene, graph, rng) {
       state._attackT -= dt;
       armR.rotation.x = -1.6 * Math.max(0, state._attackT / 0.25);
     }
-    // Idle breathing.
     body.position.y = 1.15 + (moving ? Math.abs(Math.sin(state._walkPhase)) * 0.05 : Math.sin(performance.now() * 0.002) * 0.015);
 
     group.position.set(state.pos.x, state._y, state.pos.z);

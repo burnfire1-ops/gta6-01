@@ -1,6 +1,3 @@
-// Semua dalam try/catch:
-//
-//     activeMission,
 
 export const SAVE_VERSION = 1;
 const PREFIX = 'teluk-cahaya.save.';

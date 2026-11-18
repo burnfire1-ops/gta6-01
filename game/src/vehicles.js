@@ -1,8 +1,6 @@
-//
 import * as THREE from 'three';
 import * as CFG from './config.js';
 
-// ---- Tuning default
 const FALLBACK_TYPES = {
   sedan:  { maxSpeed: 26, accel: 14, color: 0x9aa3ad },
   taxi:   { maxSpeed: 24, accel: 13, color: 0xf2c94c },
@@ -61,7 +59,6 @@ export function normalizeDriveInput(input) {
   return out;
 }
 
-// ---- Rig mobil parametr
 export function buildCarMesh(type) {
   const spec = typeSpec(type);
   const g = new THREE.Group();
@@ -161,7 +158,6 @@ export function driveVehicle(car, input, dt, ctx) {
     if (car.speed > 0.5) car.speed -= car.accel * 1.6 * dt; // rem
     else car.speed -= car.accel * 0.7 * dt; // mundur
   }
-  // Drag + rem tangan.
   car.speed -= car.speed * (inp.handbrake ? 1.4 : 0.35) * dt;
   if (Math.abs(car.speed) < 0.05 && inp.throttle === 0) car.speed = 0;
   car.speed = clamp(car.speed, -reverseTop, top);

@@ -1,4 +1,3 @@
-// jeda lapor 2 detik,
 import * as THREE from 'three';
 
 const SHIRT_COLORS = [0xe8b4b8, 0x8fb8d8, 0xd8c98f, 0x9fd8a8, 0xc9a0d8, 0xd8d8d8, 0xe07856, 0x5a7a9a];
@@ -17,20 +16,36 @@ function hasLineOfSight(a, b, colliders) {
   return true;
 }
 
-/** Rig pejalan kaki: kapsul + kepala, gaya yang sama dengan rig pemain. */
+const PANTS_COLORS = [0x2c3444, 0x3a3a3a, 0x1f2a44];
+function part(w, h, d, mat, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  return m;
+}
+
+/** Rig pejalan kaki: humanoid kotak, gaya sama dengan rig pemain. */
 export function buildWalkerMesh(color) {
   const g = new THREE.Group();
-  const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
+  const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
   const skin = new THREE.MeshStandardMaterial({
-    color: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], roughness: 0.8,
+    color: SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)], roughness: 0.9, flatShading: true,
   });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.7, 4, 10), shirt);
-  body.position.y = 1.0;
-  body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), skin);
-  head.position.y = 1.68;
-  head.castShadow = true;
-  g.add(body, head);
+  const pants = new THREE.MeshStandardMaterial({
+    color: PANTS_COLORS[Math.floor(Math.random() * PANTS_COLORS.length)], roughness: 0.9, flatShading: true,
+  });
+  g.add(part(0.55, 0.7, 0.3, shirt, 0, 1.15, 0));
+  g.add(part(0.4, 0.4, 0.4, skin, 0, 1.7, 0));
+  const armL = part(0.16, 0.65, 0.16, skin, -0.36, 1.45, 0);
+  const armR = part(0.16, 0.65, 0.16, skin, 0.36, 1.45, 0);
+  armL.geometry.translate(0, -0.28, 0);
+  armR.geometry.translate(0, -0.28, 0);
+  g.add(armL, armR);
+  const legL = part(0.22, 0.8, 0.22, pants, -0.2, 0.8, 0);
+  const legR = part(0.22, 0.8, 0.22, pants, 0.2, 0.8, 0);
+  legL.geometry.translate(0, -0.3, 0);
+  legR.geometry.translate(0, -0.3, 0);
+  g.add(legL, legR);
   g.userData.type = 'walker';
   return g;
 }

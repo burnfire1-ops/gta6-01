@@ -1,6 +1,3 @@
-// presses (interact,
-// taken once by the loop,
-// never counted twice.
 
 export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;

@@ -1,7 +1,3 @@
-// polisi mengejar.
-// game = objek dari main.
-// Scene (tesis §3):
-//           menara kaca,
 
 const STEP = 1 / 60;
 const SIM_SECONDS = 4;
@@ -53,7 +49,6 @@ function setVehicleHeading(vehicle, radians) {
     if (typeof vehicle.heading === 'number') vehicle.heading = radians;
     if (vehicle.mesh) vehicle.mesh.rotation.y = radians;
   } catch {
-    // Heading mobil tidak bisa di-set.
   }
 }
 
@@ -76,7 +71,6 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // nearestNode gagal:
   }
   try {
     if (isFn(graph.randomRoadNode)) {
@@ -159,12 +153,9 @@ function spawnPursuit(game, count) {
       for (let i = 0; i < count; i += 1) game.police.spawnPursuitUnit();
     }
   } catch {
-    // Spawn manual gagal:
   }
 }
 
-// Posisikan unit pursuit ke dalam frame.
-// dari pemain dan sim 4 dtk tidak cukup mendekatkan mereka.
 function framePursuitUnits(g, count) {
   const police = g.police;
   if (!police || !Array.isArray(police.units)) return;
@@ -194,7 +185,6 @@ function framePursuitUnits(g, count) {
         if (rp && typeof rp.x === 'number') { x = rp.x; z = rp.z; }
       }
     } catch {
-      // Tetap di titik hitung.
     }
     u.car.pos.x = x;
     u.car.pos.z = z;
@@ -208,7 +198,6 @@ function framePursuitUnits(g, count) {
         u.car.mesh.rotation.y = u.car.heading;
       }
     } catch {
-      // Mesh tidak bisa disinkron.
     }
   }
 }
@@ -235,7 +224,6 @@ function findOrSpawnVehicle(game, pos) {
     }
   } catch {
   }
-  // 2) Minta dibuatkan.
   const makers = [vehicles.spawnCar, vehicles.spawn, vehicles.create, vehicles.spawnVehicle, game.spawnVehicle];
   for (const make of makers) {
     if (!isFn(make)) continue;
@@ -248,7 +236,6 @@ function findOrSpawnVehicle(game, pos) {
       const v = make.call(vehicles, { x: pos.x, z: pos.z });
       if (v) return v;
     } catch {
-      // Lanjut.
     }
   }
   return null;
@@ -269,7 +256,6 @@ function enterVehicle(game, vehicle) {
     } else {
       return false;
     }
-    // {...state} (spread)
     try {
       game.player.onFoot = false;
       game.player.currentCar = vehicle;
@@ -277,7 +263,6 @@ function enterVehicle(game, vehicle) {
     }
     return true;
   } catch {
-    // Masuk mobil gagal.
   }
   return false;
 }
@@ -297,14 +282,12 @@ function exitVehicle(game) {
     } catch {
     }
   } catch {
-    // Keluar mobil gagal:
   }
 }
 
-// Mobil pemain di shot malam (21:00) hampir hitam: cat teal gelap di bawah
-// moonlight 0.35. Terangkan cat + naikkan emissive lampu rem, hanya di shot
-// end (fresh page per shot, mobil siang/play tidak tersentuh).
-function brightenNightCar(vehicle) {
+// Terangkan mobil pemain: malam (end) cat terang + emissive, siang (play)
+// cat terang tanpa emissive; lampu rem menyala di keduanya.
+function brightenCar(vehicle, night) {
   if (!vehicle || !vehicle.mesh || !isFn(vehicle.mesh.traverse)) return;
   vehicle.mesh.traverse((o) => {
     const m = o.material;
@@ -313,8 +296,10 @@ function brightenNightCar(vehicle) {
     if (c === 0x2ec4b6 || c === 0x14b8a6) {
       m.color.setHex(0x7ef0dd);
       if (m.emissive && typeof m.emissive.setHex === 'function') {
-        m.emissive.setHex(0x0f766e);
-        m.emissiveIntensity = 0.5;
+        if (night) {
+          m.emissive.setHex(0x0f766e);
+          m.emissiveIntensity = 0.5;
+        } else m.emissiveIntensity = 0;
       }
     } else if (c === 0xcc1111 && m.emissive) {
       m.emissiveIntensity = 2.6;
@@ -323,8 +308,35 @@ function brightenNightCar(vehicle) {
 }
 
 // Penuhi frame shot dengan NPC yang sudah ada (bukan sistem baru): pejalan
-// kaki di trotoar sisi dalam kota + mobil NPC di lajur berlawanan menghadap
-// kamera. Dipanggil SETELAH advanceSim supaya posisi staging tidak hanyut.
+// kaki di trotoar + mobil NPC di lajur berlawanan menghadap kamera.
+// Dipanggil SETELAH advanceSim supaya posisi staging tidak hanyut.
+// Titik as jalan SEARAH heading: di sudut peta nearestPointOnGraph bisa
+// jatuh ke jalan tegak lurus (pemain di (-220,-218) menempel edge utara-
+// selatan, padahal jalannya yang timur-barat di z=-220).
+function axisPointOnHeading(g, x, z, fx, fz) {
+  const graph = g.graph;
+  if (!graph || !Array.isArray(graph.edges) || !graph.nodeById) return null;
+  let best = null;
+  let bestD = Infinity;
+  for (const e of graph.edges) {
+    const a = graph.nodeById.get(e.a);
+    const b = graph.nodeById.get(e.b);
+    if (!a || !b) continue;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    if (len === 0) continue;
+    if (Math.abs((dx * fx + dz * fz) / len) < 0.7) continue;
+    let t = ((x - a.x) * dx + (z - a.z) * dz) / (len * len);
+    t = Math.max(0, Math.min(1, t));
+    const px = a.x + dx * t;
+    const pz = a.z + dz * t;
+    const d = (px - x) ** 2 + (pz - z) ** 2;
+    if (d < bestD) { bestD = d; best = { x: px, z: pz }; }
+  }
+  return best;
+}
+
 function stageCrowd(g) {
   const p = readPos(g.player);
   if (!p) return;
@@ -334,13 +346,21 @@ function stageCrowd(g) {
   const rx = Math.cos(h);
   const rz = -Math.sin(h);
   const side = (-p.x * rx + -p.z * rz) >= 0 ? 1 : -1;
+  // Jarak lateral pemain dari as jalan: walker di-snap ke as jalan (4.6
+  // dari as = di trotoar, bukan di tepi trotoar / lajur mobil).
+  let axisLat = 0;
+  try {
+    const a = axisPointOnHeading(g, p.x, p.z, fx, fz);
+    if (a && typeof a.x === 'number') axisLat = (p.x - a.x) * rx + (p.z - a.z) * rz;
+  } catch {
+  }
   const walkers = g.pedestrians && Array.isArray(g.pedestrians.walkers) ? g.pedestrians.walkers : [];
   const wSpots = [6, 11, 17, 23, 29, 35];
   for (let i = 0; i < Math.min(6, walkers.length); i += 1) {
     const w = walkers[i];
     if (!w || !w.pos) continue;
-    const x = p.x + fx * wSpots[i] + rx * side * 5.5;
-    const z = p.z + fz * wSpots[i] + rz * side * 5.5;
+    const x = p.x + fx * wSpots[i] + rx * (side * 4.6 - axisLat);
+    const z = p.z + fz * wSpots[i] + rz * (side * 4.6 - axisLat);
     w.pos.x = x;
     w.pos.z = z;
     w.heading = h;
@@ -372,17 +392,15 @@ function stageCrowd(g) {
     } catch {
     }
   }
-  // Singkirkan NPC liar dari zona kamera: pejalan kaki/mobil NPC yang
-  // kebetulan berada <12/<15 unit dari pemain bisa menutupi lensa (di shot
-  // end cp5 satu walker acak mendarat 4 unit di depan kamera). Pindah jauh
-  // ke depan, sisi seberang, supaya tetap ada di dunia tapi tidak memblokir.
+  // Singkirkan NPC liar dari zona kamera (<12/<15 unit bisa menutupi lensa).
+  // Pindah jauh ke depan, sisi seberang, supaya tidak memblokir.
   for (let i = 6; i < walkers.length; i += 1) {
     const w = walkers[i];
     if (!w || !w.pos) continue;
     if (Math.hypot(w.pos.x - p.x, w.pos.z - p.z) >= 12) continue;
     const fwd = 48 + (i % 3) * 8;
-    const x = p.x + fx * fwd + rx * -side * 5.5;
-    const z = p.z + fz * fwd + rz * -side * 5.5;
+    const x = p.x + fx * fwd + rx * (-side * 4.6 - axisLat);
+    const z = p.z + fz * fwd + rz * (-side * 4.6 - axisLat);
     w.pos.x = x;
     w.pos.z = z;
     w.heading = h;
@@ -415,9 +433,16 @@ function stageCrowd(g) {
   }
 }
 
-function startFirstMission(game) {
+function startFirstMission(game, want) {
   const missions = game.missions;
   if (!missions || !isFn(missions.startMission)) return;
+  if (want !== undefined) {
+    try {
+      missions.startMission(want);
+      return;
+    } catch {
+    }
+  }
   const tries = [1, 0, 'misi-1', 'mission-1'];
   try {
     if (Array.isArray(missions.list) && missions.list.length > 0) {
@@ -514,7 +539,6 @@ function frameChaseCamera(game) {
 
 export function stageShot(name, game) {
   const g = game || {};
-  // RNG game bila ada,
   const rng = typeof g.rng === 'function' ? g.rng : mulberry32(1);
   if (g.police && isFn(g.police.setAutoSpawn)) g.police.setAutoSpawn(false);
   if (g.police && isFn(g.police.clearUnits)) g.police.clearUnits();
@@ -529,6 +553,7 @@ export function stageShot(name, game) {
     const vehicle = findOrSpawnVehicle(g, node);
     enterVehicle(g, vehicle);
     setVehicleHeading(vehicle, 0);
+    brightenCar(vehicle, false);
     setWanted(g, 2);
     spawnPursuit(g, 2);
     startFirstMission(g);
@@ -559,9 +584,10 @@ export function stageShot(name, game) {
     const vehicle = findOrSpawnVehicle(g, node);
     enterVehicle(g, vehicle);
     setVehicleHeading(vehicle, head);
-    brightenNightCar(vehicle);
+    brightenCar(vehicle, true);
     setWanted(g, 5);
     spawnPursuit(g, 4);
+    startFirstMission(g, 3);
     advanceSim(g, SIM_SECONDS);
     if (g.police && Array.isArray(g.police.units) && g.police.units.length < 4) {
       spawnPursuit(g, 4);

@@ -1,4 +1,3 @@
-// dan beacon kuning;
 import * as THREE from 'three';
 import { buildWalkerMesh } from './pedestrians.js';
 
@@ -68,7 +67,7 @@ export function createMissions(ctx) {
     { index: 2, title: 'Lolos Patroli', desc: 'Patroli mengejarmu di wanted 2. Putus garis pandang dan kabur sampai wanted 0.', reward: REWARDS[2], district: 'Boulevard', targetPos: boulevard },
     { index: 3, title: 'Antar Malam', desc: 'Antar paket lewat Distrik Neon. Paket hanya diterima saat malam (18:00-06:00).', reward: REWARDS[3], district: 'Neon', targetPos: neon },
     { index: 4, title: 'Kejar Target', desc: 'Target kabur dengan mobil. Tabrak mobilnya sampai hancur (health 0).', reward: REWARDS[4], district: 'Pelabuhan', targetPos: port },
-    { index: 5, title: 'Gudang Pelabuhan', desc: 'Masuk gudang dan kalahkan 3 penjaga. Dekati penjaga lalu tekan F untuk memukul.', reward: REWARDS[5], district: 'Pelabuhan', targetPos: port },
+    { index: 5, title: 'Gudang Pelabuhan', desc: 'Masuk gudang dan kalahkan 3 penjaga. Dekati penjaga lalu tekan F atau E untuk memukul.', reward: REWARDS[5], district: 'Pelabuhan', targetPos: port },
     { index: 6, title: 'Konvoi Tiga Titik', desc: 'Lewati 3 checkpoint sebelum waktu habis: Boulevard, Neon, Pelabuhan.', reward: REWARDS[6], district: 'Teluk Cahaya', targetPos: boulevard },
     { index: 7, title: 'Pelarian Final', desc: 'Lintasi kota dengan wanted 5 dan capai ujung kota. Semua sistem sekaligus.', reward: REWARDS[7], district: 'Bukit', targetPos: hill },
   ];
@@ -200,7 +199,6 @@ export function createMissions(ctx) {
       }
       state.objectiveText = 'Tabrak mobil target sampai hancur! (health target 100)';
     } else if (index === 5) {
-      // Gudang Pelabuhan:
       a.dummies = [];
       for (let i = 0; i < 3; i++) {
         const mesh = buildWalkerMesh(0xcc2222);
@@ -210,7 +208,7 @@ export function createMissions(ctx) {
         if (ctx && ctx.scene) ctx.scene.add(mesh);
         a.dummies.push({ mesh, pos: { x: px, z: pz }, alive: true });
       }
-      state.objectiveText = 'Kalahkan 3 penjaga gudang: dekati lalu tekan F. (0/3)';
+      state.objectiveText = 'Kalahkan 3 penjaga gudang: dekati lalu tekan F/E. (0/3)';
     } else if (index === 6) {
       a.checkpoints = [boulevard, neon, port];
       a.timer = 150;
@@ -243,7 +241,6 @@ export function createMissions(ctx) {
 
   function update(dt) {
     const d = Math.min(Math.max(dt || 0, 0), 0.1);
-    // Denyut beacon.
     if (state.beacon && state.beacon.visible) {
       state.beaconT += d;
       const s = 1 + Math.sin(state.beaconT * 3) * 0.15;
