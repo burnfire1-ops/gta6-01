@@ -1,9 +1,3 @@
-// Boot Teluk Cahaya (thre
-// contract order, one
-// Screens: title / play /
-// ?shot=start|play|end&se
-// sets window.__shotReady
-// window.__game exposes
 
 import * as THREE from 'three';
 import { CITY, DAY_LENGTH_SECONDS, MISSIONS, SEED } from './config.js';
@@ -52,7 +46,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 900);
 camera.position.set(0, 6, -12);
 
-// --- Build the world
 const graph = createRoadGraph();
 const city = buildCity(scene, graph, rng);
 const dayNight = createDayNight(scene);
@@ -66,9 +59,32 @@ const police = createPolice(scene, graph, fleet, rng);
 const hud = createHud();
 const audio = createAudio();
 const saveSystem = createSaveSystem();
-const missions = createMissions({
-  player, vehicles: fleet, police, graph, rng, dayNight, hud, audio, save: saveSystem,
-});
+// Satu ctx untuk semua subsistem.
+// missions DULU menerima objek lain tanpa money/toast/input/timeHours/scene,
+// getter baru dipanggil saat permainan jalan, setelah `game` ada.
+const ctx = {
+  player,
+  fleet,
+  police,
+  traffic,
+  pedestrians,
+  graph,
+  city,
+  scene,
+  dayNight,
+  input,
+  save: saveSystem,
+  cameraYaw: 0,
+  interactPressed: false,
+  toast: (m) => hud.toast(m),
+  get money() { return game.state.money; },
+  set money(v) { game.state.money = v; },
+  get timeHours() {
+    return dayNight.timeHours;
+  },
+};
+const missions = createMissions(ctx);
+ctx.missions = missions;
 
 const game = {
   player,
@@ -99,31 +115,8 @@ let screen = 'title';
 let lastObjective = '';
 let last = performance.now();
 
-const ctx = {
-  player,
-  fleet,
-  police,
-  traffic,
-  pedestrians,
-  missions,
-  graph,
-  city,
-  dayNight,
-  input,
-  cameraYaw: 0,
-  interactPressed: false,
-  toast: (m) => hud.toast(m),
-  get money() { return game.state.money; },
-  set money(v) { game.state.money = v; },
-  get timeHours() {
-    return dayNight.timeHours;
-  },
-};
-
 function showScreen(name) {
   screen = name;
-  // hud.js only knows 'ti
-  // toggled directly here
   const gameoverMenu = document.getElementById('menu-gameover');
   if (gameoverMenu) gameoverMenu.style.display = name === 'gameover' ? 'flex' : 'none';
   if (name === 'play') {
@@ -215,7 +208,6 @@ function step(dt) {
 
   handleActions(actions);
   if (screen === 'title') {
-    // Title backdrop: slo
     const t = performance.now() * 0.00002;
     camera.position.set(Math.sin(t) * 120, 55, Math.cos(t) * 120);
     camera.lookAt(0, 8, 0);
@@ -229,11 +221,8 @@ function step(dt) {
   if (actions & ACTION_INTERACT) handleInteract();
   if (actions & ACTION_ATTACK) player.attack();
 
-  // Update order: player/
-  // missions -> dayNight
   player.update(dt, input, ctx);
   fleet.update(dt, ctx);
-  // Player rig rides the
   if (!player.onFoot && player.currentCar) {
     player.pos.x = player.currentCar.pos?.x ?? player.currentCar.x ?? player.pos.x;
     player.pos.z = player.currentCar.pos?.z ?? player.currentCar.z ?? player.pos.z;
@@ -311,7 +300,6 @@ function runShot(name) {
   if (staged && staged.screen === 'gameover') showScreen('gameover');
   else if (staged && staged.screen === 'title') showScreen('title');
   else showScreen('play');
-  // Paint twice so textur
   let painted = 0;
   function paint() {
     dayNight.update(0);
@@ -324,7 +312,6 @@ function runShot(name) {
 }
 
 function runGame() {
-  // Menu buttons (also
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', fn);

@@ -1,17 +1,7 @@
 // police-pursuit.js —
 // FILE PALING PENTING.
 // skill open-world-crime,
-//  - Semua steering memak
-//  - Gerak polisi dibatas
-//  - Persepsi 5-10 Hz +
-//  - Spawn selalu di luar
-//  - Top speed polisi =
-//  - Anti-macet: < 0,5
 //  - Hysteresis waypoint:
-//  - Kabur = putus kontak
-//    ganti mobil di tempa
-//  - Tertangkap: unit < 3
-//    wanted 0, pemain
 import * as CFG from './config.js';
 import { clamp, turnToward } from './vehicles.js';
 
@@ -69,7 +59,6 @@ export function createPolice(scene, graph, fleet, rng) {
     lastCar: null,
   };
 
-  // ---------- Proyeksi &
   function pinTargetToRoad(x, z) {
     if (graph && typeof graph.nearestPointOnGraph === 'function') {
       try {
@@ -101,7 +90,6 @@ export function createPolice(scene, graph, fleet, rng) {
     const dz = car.pos.z - center.z;
     const lateral = Math.hypot(dx, dz);
     if (lateral > ROAD_BAND) {
-      // Steer balik ke ce
       if (dt) {
         car.heading = turnToward(
           car.heading, Math.atan2(center.x - car.pos.x, center.z - car.pos.z), 3.0 * dt,
@@ -113,7 +101,6 @@ export function createPolice(scene, graph, fleet, rng) {
     }
   }
 
-  // ---------- Path A*
   function planPath(unit, targetPos) {
     if (!graph || typeof graph.findPathAStar !== 'function') return null;
     const from = graph.nearestNode ? graph.nearestNode(unit.car.pos.x, unit.car.pos.z) : null;
@@ -160,7 +147,6 @@ export function createPolice(scene, graph, fleet, rng) {
     for (const test of tiers) {
       const cands = nodes.filter(test);
       if (cands.length) {
-        // Pilih yang terj
         cands.sort((a, b) =>
           Math.hypot(b.x - tp.x, b.z - tp.z) - Math.hypot(a.x - tp.x, a.z - tp.z));
         best = cands[Math.floor(rand() * Math.min(3, cands.length))];
@@ -227,7 +213,6 @@ export function createPolice(scene, graph, fleet, rng) {
     let count = activeUnits().length;
     const playerPos = S.lastCtx && S.lastCtx.player ? S.lastCtx.player.pos : { x: 0, z: 0 };
     while (count < n) {
-      // Unit patroli yang
       const patroller = api.units.find((u) => u.state === 'patrol');
       if (patroller) {
         patroller.state = 'pursue';
@@ -240,7 +225,6 @@ export function createPolice(scene, graph, fleet, rng) {
       }
       count = activeUnits().length;
     }
-    // Kelebihan unit -> m
     const extra = activeUnits().slice(n);
     for (const u of extra) {
       u.state = 'giveup';
@@ -261,7 +245,6 @@ export function createPolice(scene, graph, fleet, rng) {
   }
 
   function reportCrime(pos) {
-    // Max +1 bintang per
     if (api.wanted === 0) {
       api.wanted = 1;
       S.escapeTimer = 0;
@@ -289,20 +272,19 @@ export function createPolice(scene, graph, fleet, rng) {
     S.escapeTimer += (escapeTime - S.escapeTimer) / 2;
   }
 
-  // (d) Matikan auto-spaw
   function setAutoSpawn(on) {
     api.autoSpawn = on !== false;
   }
 
-  // (d) Kosongkan roster
   function clearUnits() {
     for (const u of [...api.units]) despawn(u);
   }
 
   function policeStationNode() {
     const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
-    const b = nodes.find((n) => typeof n.district === 'string'
-      && n.district.toLowerCase().includes('boulevard'));
+    const b = nodes.find((n) => n.policeStation)
+      || nodes.find((n) => typeof n.district === 'string'
+        && n.district.toLowerCase().includes('boulevard'));
     if (b) return b;
     return nodes[0] || { x: 0, z: 0 };
   }
@@ -347,7 +329,6 @@ export function createPolice(scene, graph, fleet, rng) {
     S.time += d;
     const player = ctx && ctx.player;
     if (!player || !player.pos) {
-      // Tanpa pemain: pat
       for (const u of [...api.units]) stepUnit(u, null, null, d, ctx);
       return;
     }
@@ -358,7 +339,6 @@ export function createPolice(scene, graph, fleet, rng) {
     };
     const colliders = ctx && ctx.city ? ctx.city.colliders : null;
 
-    // Ganti mobil (terdet
     const curCar = player.currentCar || null;
     if (curCar !== S.lastCar) {
       const wasSeen = api.units.some((u) => u.canSee);
@@ -366,7 +346,6 @@ export function createPolice(scene, graph, fleet, rng) {
       S.lastCar = curCar;
     }
 
-    // Persepsi per unit (
     for (const u of api.units) {
       u.perceptionTimer -= d;
       if (u.perceptionTimer <= 0) {
@@ -394,11 +373,9 @@ export function createPolice(scene, graph, fleet, rng) {
       }
     }
 
-    // (f) Escaping = want
     api.wantedEscaping = api.wanted > 0 && api.units.length > 0
       && !api.units.some((u) => u.canSee);
 
-    // Escape: hanya saat
     if (api.wanted > 0) {
       const anySeen = api.units.some((u) => u.canSee);
       if (anySeen) {
@@ -415,8 +392,6 @@ export function createPolice(scene, graph, fleet, rng) {
       }
     }
 
-    // Tertangkap: unit <
-    // (c) Juga pemain di
     const stoppedInCar = !player.onFoot && player.currentCar
       && Math.abs(player.speed || 0) < 0.5
       && Math.abs(player.currentCar.speed || 0) < 0.5;
@@ -433,7 +408,6 @@ export function createPolice(scene, graph, fleet, rng) {
       S.captureTimer = 0;
     }
 
-    // Gerakkan semua unit
     for (const u of [...api.units]) {
       if (u.state === 'giveup') {
         u.giveupTimer += d;
@@ -453,11 +427,9 @@ export function createPolice(scene, graph, fleet, rng) {
     if (!car) return;
     if (u.ramCooldown > 0) u.ramCooldown -= d;
 
-    // Tentukan target jal
     let target = null;
     let cruise = 10;
     if (u.state === 'pursue' && pPos) {
-      // Intercept: posisi
       const ix = pPos.x + pVel.x * 0.8;
       const iz = pPos.z + pVel.z * 0.8;
       const pinned = pinTargetToRoad(ix, iz);
@@ -481,7 +453,6 @@ export function createPolice(scene, graph, fleet, rng) {
       }
     }
 
-    // Ikuti waypoint deng
     let wpPos = null;
     if (u.path.length && u.wp < u.path.length) {
       const wpNode = nodePos(graph, u.path[u.wp]);
@@ -506,10 +477,8 @@ export function createPolice(scene, graph, fleet, rng) {
         }
       }
     }
-    // Bila tidak ada wayp
     const dest = wpPos || target || { x: car.pos.x, z: car.pos.z };
 
-    // Steering ke waypoin
     const dx = dest.x - car.pos.x;
     const dz = dest.z - car.pos.z;
     const wantHeading = Math.atan2(dx, dz);
@@ -518,23 +487,18 @@ export function createPolice(scene, graph, fleet, rng) {
     while (dh < -Math.PI) dh += Math.PI * 2;
     const turnRate = 2.6;
     car.heading = turnToward(car.heading, wantHeading, turnRate * d);
-    // Pelan saat belok ta
     const speedTarget = Math.abs(dh) > 0.8 ? cruise * 0.6 : cruise;
     car.speed += clamp(speedTarget - car.speed, -18 * d, 12 * d);
     car.pos.x += Math.sin(car.heading) * car.speed * d;
     car.pos.z += Math.cos(car.heading) * car.speed * d;
     enforceRoadBand(u, d);
 
-    // Anti-macet: tidak m
     u.stuckTimer += d;
     if (u.stuckTimer >= 2) {
       const moved = Math.hypot(car.pos.x - u.lastProgress.x, car.pos.z - u.lastProgress.z);
       if (moved < 0.5 && car.speed > 0.5) {
         u.stuckCount++;
         if (target && u.stuckCount >= 2) {
-          // (b) Teleport
-          // pandangan pem
-          // > 40 di luar
           const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
           const pp = ctx && ctx.player ? ctx.player.pos : car.pos;
           const vd = viewDir();
@@ -564,7 +528,6 @@ export function createPolice(scene, graph, fleet, rng) {
       u.stuckTimer = 0;
     }
 
-    // Search: sampai di p
     if (u.state === 'search' && target) {
       if (Math.hypot(car.pos.x - target.x, car.pos.z - target.z) < 4) {
         u.searchTimer += d;
@@ -577,7 +540,6 @@ export function createPolice(scene, graph, fleet, rng) {
       }
     }
 
-    // Ramming ringan ke m
     const ctxPlayer = ctx && ctx.player;
     if (ctxPlayer && ctxPlayer.currentCar && u.state === 'pursue' && u.ramCooldown <= 0) {
       const pc = ctxPlayer.currentCar;
@@ -594,7 +556,6 @@ export function createPolice(scene, graph, fleet, rng) {
     }
   }
 
-  // Satu unit patroli amb
   spawnPatrolUnit();
 
   return api;

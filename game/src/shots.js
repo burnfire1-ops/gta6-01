@@ -1,23 +1,8 @@
-// Screenshot scenes Teluk
-// Tulis ulang total untuk
-// kode game lama. Setiap
-// (bukan pose mati) supay
 // polisi mengejar.
-//
-// Kontrak: stageShot(name
 // game = objek dari main.
-// missions, graph, dayNig
-// DITULIS DEFENSIF: tiap
-// main.js bisa memanggil
 // dilewati diam-diam —
-//
 // Scene (tesis §3):
-//   start — siang (jam
 //           menara kaca,
-//   play  — golden hour
-//           2 unit pursui
-//   end   — malam neon
-//           persimpangan
 
 const STEP = 1 / 60;
 const SIM_SECONDS = 4;
@@ -26,7 +11,6 @@ function isFn(v) {
   return typeof v === 'function';
 }
 
-// Ambil posisi {x, z}
 function readPos(obj) {
   if (!obj || typeof obj !== 'object') return null;
   const p = obj.pos || obj.position || obj;
@@ -58,12 +42,22 @@ function setHeading(obj, radians) {
     if (typeof obj.heading === 'number') obj.heading = radians;
     else if (obj.rotation && typeof obj.rotation.y === 'number') obj.rotation.y = radians;
   } catch {
-    // Heading tidak bisa
   }
 }
 
-// RNG kecil deterministik
-// rng-nya sendiri, supaya
+// Heading mobil pemain: player.update MENIMPA heading pemain dengan
+// heading mobil saat mengemudi, jadi heading yang di-set di stageShot
+// hilang selama advanceSim bila hanya pemain yang di-set. Set keduanya.
+function setVehicleHeading(vehicle, radians) {
+  if (!vehicle || typeof vehicle !== 'object') return;
+  try {
+    if (typeof vehicle.heading === 'number') vehicle.heading = radians;
+    if (vehicle.mesh) vehicle.mesh.rotation.y = radians;
+  } catch {
+    // Heading mobil tidak bisa di-set.
+  }
+}
+
 function mulberry32(seed) {
   let a = seed | 0;
   return function random() {
@@ -74,8 +68,6 @@ function mulberry32(seed) {
   };
 }
 
-// Satu node jalan sebagai
-// randomRoadNode butuh
 function pickRoadNode(graph, prefer, rng) {
   if (!graph) return { x: 0, z: 0 };
   const rand = typeof rng === 'function' ? rng : mulberry32(1);
@@ -93,7 +85,6 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // randomRoadNode gaga
   }
   try {
     if (Array.isArray(graph.nodes) && graph.nodes.length > 0) {
@@ -115,12 +106,10 @@ function pickRoadNode(graph, prefer, rng) {
       if (p) return p;
     }
   } catch {
-    // Daftar node tidak b
   }
   return { x: 0, z: 0 };
 }
 
-// Node jalan terjauh dari
 function pickEdgeNode(graph) {
   if (!graph || !Array.isArray(graph.nodes) || graph.nodes.length === 0) {
     return pickRoadNode(graph, null);
@@ -146,7 +135,6 @@ function setTime(game, hours) {
     else if (game.dayNight && typeof game.dayNight.timeHours === 'number') game.dayNight.timeHours = hours;
     else if (game.state && typeof game.state.timeHours === 'number') game.state.timeHours = hours;
   } catch {
-    // Jam kota tidak bisa
   }
 }
 
@@ -157,13 +145,11 @@ function setWanted(game, level) {
       return;
     }
   } catch {
-    // addWanted gagal: ja
   }
   try {
     if (game.police && typeof game.police.wanted === 'number') game.police.wanted = level;
     if (game.state && typeof game.state.wanted === 'number') game.state.wanted = level;
   } catch {
-    // Wanted tidak bisa d
   }
 }
 
@@ -175,16 +161,62 @@ function spawnPursuit(game, count) {
     }
   } catch {
     // Spawn manual gagal:
-    // ada yang menggantik
   }
 }
 
-// Cari kendaraan yang
+// Posisikan unit pursuit ke dalam frame.
+// dari pemain dan sim 4 dtk tidak cukup mendekatkan mereka.
+function framePursuitUnits(g, count) {
+  const police = g.police;
+  if (!police || !Array.isArray(police.units)) return;
+  const p = readPos(g.player);
+  if (!p) return;
+  const h = typeof g.player.heading === 'number' ? g.player.heading : 0;
+  const fx = Math.sin(h);
+  const fz = Math.cos(h);
+  const rx = Math.cos(h);
+  const rz = -Math.sin(h);
+  while (police.units.length < count) {
+    const before = police.units.length;
+    try { spawnPursuit(g, 1); } catch { break; }
+    if (police.units.length === before) break;
+  }
+  const spots = [[13, -3.2], [18, 3.2], [23, -3.2], [28, 3.2]];
+  const n = Math.min(count, police.units.length);
+  for (let i = 0; i < n; i += 1) {
+    const u = police.units[i];
+    if (!u || !u.car) continue;
+    const spot = spots[i % spots.length];
+    let x = p.x + fx * spot[0] + rx * spot[1];
+    let z = p.z + fz * spot[0] + rz * spot[1];
+    try {
+      if (g.graph && isFn(g.graph.nearestPointOnGraph)) {
+        const rp = g.graph.nearestPointOnGraph(x, z);
+        if (rp && typeof rp.x === 'number') { x = rp.x; z = rp.z; }
+      }
+    } catch {
+      // Tetap di titik hitung.
+    }
+    u.car.pos.x = x;
+    u.car.pos.z = z;
+    u.car.heading = h + Math.PI;
+    u.car.speed = 0;
+    u.car.sirenOn = true;
+    u.state = 'pursue';
+    try {
+      if (u.car.mesh) {
+        u.car.mesh.position.set(x, 0, z);
+        u.car.mesh.rotation.y = u.car.heading;
+      }
+    } catch {
+      // Mesh tidak bisa disinkron.
+    }
+  }
+}
+
 function findOrSpawnVehicle(game, pos) {
   const vehicles = game.vehicles;
   if (!vehicles) return null;
-  // 1) Kendaraan yang sud
-  //    Fleet menyimpan
   try {
     const list = Array.isArray(vehicles.cars)
       ? vehicles.cars
@@ -203,7 +235,6 @@ function findOrSpawnVehicle(game, pos) {
       }
     }
   } catch {
-    // Daftar kendaraan be
   }
   // 2) Minta dibuatkan.
   const makers = [vehicles.spawnCar, vehicles.spawn, vehicles.create, vehicles.spawnVehicle, game.spawnVehicle];
@@ -213,7 +244,6 @@ function findOrSpawnVehicle(game, pos) {
       const v = make.call(vehicles, 'sport', { x: pos.x, z: pos.z }, { color: '#2ec4b6' });
       if (v) return v;
     } catch {
-      // Satu signature ga
     }
     try {
       const v = make.call(vehicles, { x: pos.x, z: pos.z });
@@ -228,7 +258,6 @@ function findOrSpawnVehicle(game, pos) {
 function enterVehicle(game, vehicle) {
   if (!vehicle) return false;
   try {
-    // Nama metode di modu
     if (game.player && isFn(game.player.enterCar)) {
       game.player.enterCar(vehicle);
     } else if (game.player && isFn(game.player.enterVehicle)) {
@@ -241,18 +270,11 @@ function enterVehicle(game, vehicle) {
     } else {
       return false;
     }
-    // Sinkronkan snapshot
     // {...state} (spread)
-    // SALINAN STALE — ent
-    // player.onFoot/curre
-    // Tulis salinannya ju
-    // (Perbaikan benar: p
-    // itu sendiri — dicat
     try {
       game.player.onFoot = false;
       game.player.currentCar = vehicle;
     } catch {
-      // Properti read-onl
     }
     return true;
   } catch {
@@ -270,12 +292,10 @@ function exitVehicle(game) {
       game.player.currentCar = null;
       game.player.onFoot = true;
     }
-    // Sinkronkan snapshot
     try {
       game.player.onFoot = true;
       game.player.currentCar = null;
     } catch {
-      // Properti read-onl
     }
   } catch {
     // Keluar mobil gagal:
@@ -292,19 +312,16 @@ function startFirstMission(game) {
       if (first && first.id !== undefined) tries.unshift(first.id);
     }
   } catch {
-    // Daftar misi belum s
   }
   for (const id of tries) {
     try {
       missions.startMission(id);
       return;
     } catch {
-      // Coba id berikutny
     }
   }
 }
 
-// Majukan simulasi secuku
 function advanceSim(game, seconds) {
   const steps = Math.round(seconds / STEP);
   const updaters = [];
@@ -320,15 +337,11 @@ function advanceSim(game, seconds) {
       try {
         u(STEP);
       } catch {
-        // Satu subsistem
       }
     }
   }
 }
 
-// Susun state HUD dari
-// Penting: runShot di
-// jadi tanpa panggilan
 function pushHudState(g) {
   const hud = g.hud;
   if (!hud || !isFn(hud.update)) return;
@@ -365,15 +378,9 @@ function pushHudState(g) {
       speedKmh: 0,
     });
   } catch {
-    // HUD gagal di-update
   }
 }
 
-// Bingkai kamera chase
-// belakang mobil pemain
-// di main.js TIDAK menjal
-// mengikuti pemain, sehin
-// Konvensi heading sama
 function frameChaseCamera(game) {
   try {
     const camera = game.camera;
@@ -389,7 +396,6 @@ function frameChaseCamera(game) {
     camera.position.set(p.x - fx * 9, 3.5, p.z - fz * 9);
     camera.lookAt(p.x + fx * 6, 1.2, p.z + fz * 6);
   } catch {
-    // Kamera tidak bisa d
   }
 }
 
@@ -397,13 +403,10 @@ export function stageShot(name, game) {
   const g = game || {};
   // RNG game bila ada,
   const rng = typeof g.rng === 'function' ? g.rng : mulberry32(1);
-  // (d) Isolasi roster
-  // dan kosongkan unit
   if (g.police && isFn(g.police.setAutoSpawn)) g.police.setAutoSpawn(false);
   if (g.police && isFn(g.police.clearUnits)) g.police.clearUnits();
 
   if (name === 'play') {
-    // Golden hour, mobil
     setTime(g, 17.5);
     const node = pickRoadNode(g.graph, { x: 0, z: 0 }, rng);
     if (g.player) {
@@ -412,15 +415,16 @@ export function stageShot(name, game) {
     }
     const vehicle = findOrSpawnVehicle(g, node);
     enterVehicle(g, vehicle);
+    setVehicleHeading(vehicle, 0);
     setWanted(g, 2);
     spawnPursuit(g, 2);
     startFirstMission(g);
     advanceSim(g, SIM_SECONDS);
-    // Unit pursuit bisa b
     if (g.police && Array.isArray(g.police.units) && g.police.units.length === 0) {
       spawnPursuit(g, 2);
       advanceSim(g, 1);
     }
+    framePursuitUnits(g, 2);
     if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
     frameChaseCamera(g);
     pushHudState(g);
@@ -428,15 +432,19 @@ export function stageShot(name, game) {
   }
 
   if (name === 'end') {
-    // Malam neon, wanted
     setTime(g, 21);
     const node = pickEdgeNode(g.graph);
+    // Hadap sepanjang jalan ke tengah kota, bukan diagonal keluar peta.
+    const head = Math.abs(node.x) >= Math.abs(node.z)
+      ? (node.x > 0 ? -Math.PI / 2 : Math.PI / 2)
+      : (node.z > 0 ? Math.PI : 0);
     if (g.player) {
       writePos(g.player, node.x, node.z);
-      setHeading(g.player, Math.PI / 4);
+      setHeading(g.player, head);
     }
     const vehicle = findOrSpawnVehicle(g, node);
     enterVehicle(g, vehicle);
+    setVehicleHeading(vehicle, head);
     setWanted(g, 5);
     spawnPursuit(g, 4);
     advanceSim(g, SIM_SECONDS);
@@ -444,13 +452,13 @@ export function stageShot(name, game) {
       spawnPursuit(g, 4);
       advanceSim(g, 1);
     }
+    framePursuitUnits(g, 4);
     if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
     frameChaseCamera(g);
     pushHudState(g);
     return { screen: 'play' };
   }
 
-  // start (dan nama lain
   setTime(g, 10);
   const node = pickRoadNode(g.graph, { x: 0, z: 0 }, rng);
   exitVehicle(g);
@@ -458,7 +466,6 @@ export function stageShot(name, game) {
     writePos(g.player, node.x, node.z);
     setHeading(g.player, 0);
   }
-  // Traffic + pejalan kak
   advanceSim(g, SIM_SECONDS);
   if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('title');
   pushHudState(g);

@@ -1,6 +1,4 @@
-// Pure road graph for
 // across a ~440x440 city,
-// No THREE dependency
 
 import { CITY } from './config.js';
 
@@ -51,14 +49,19 @@ export function createRoadGraph() {
       addNode(nodeId(ix, iz), coords[ix], coords[iz]);
     }
   }
-  // Grid edges: east +
   for (let iz = 0; iz < n; iz += 1) {
     for (let ix = 0; ix < n; ix += 1) {
       if (ix + 1 < n) addEdge(nodeId(ix, iz), nodeId(ix + 1, iz));
       if (iz + 1 < n) addEdge(nodeId(ix, iz), nodeId(ix, iz + 1));
     }
   }
-  // Harbour bridge: from
+  // Kantor polisi Boulevard: node art-deco satu blok dari pusat kota.
+  // policeStationNode() di police-pursuit.js memakai tanda ini.
+  // Tanpa tanda, busted() jatuh ke nodes[0] (sudut peta) dan toast-nya bohong.
+  const stIx = coords.indexOf(-20);
+  const stNode = stIx >= 0 ? nodeById.get(nodeId(stIx, stIx)) : null;
+  if (stNode) stNode.policeStation = true;
+
   const portNode = nodeId(0, 9); //
   void portNode;
   const bridgeStart = nodeId(0, 8); // (-220
@@ -66,13 +69,11 @@ export function createRoadGraph() {
   const b1 = 1001;
   addNode(b0, -260, 120);
   addNode(b1, -300, 120);
-  // A short link from the
   const linkNode = 1002;
   addNode(linkNode, -220, 120);
   addEdge(bridgeStart, linkNode);
   addEdge(linkNode, b0);
   addEdge(b0, b1);
-  // Fix the bridge nodes'
   nodeById.get(b0).district = 'port';
   nodeById.get(b1).district = 'port';
   nodeById.get(linkNode).district = 'port';
