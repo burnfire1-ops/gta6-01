@@ -1,23 +1,11 @@
 import * as THREE from 'three';
+import { hasLineOfSight } from './police-pursuit.js';
 
 const SHIRT_COLORS = [0xe8b4b8, 0x8fb8d8, 0xd8c98f, 0x9fd8a8, 0xc9a0d8, 0xd8d8d8, 0xe07856, 0x5a7a9a];
 const SKIN_COLORS = [0xe8b88a, 0xc98e6a, 0x8a5a3a, 0xf0c8a0, 0x6a4530];
 
-/** Cek garis pandang: 3 sample point di segmen a->b terhadap collider gedung. */
-function hasLineOfSight(a, b, colliders) {
-  if (!colliders || !colliders.length) return true;
-  for (const s of [0.25, 0.5, 0.75]) {
-    const x = a.x + (b.x - a.x) * s;
-    const z = a.z + (b.z - a.z) * s;
-    for (const c of colliders) {
-      if (Math.hypot(x - c.x, z - c.z) < c.r) return false;
-    }
-  }
-  return true;
-}
-
 const PANTS_COLORS = [0x2c3444, 0x3a3a3a, 0x1f2a44];
-function part(w, h, d, mat, x, y, z) {
+export function part(w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
   m.castShadow = true;
@@ -167,7 +155,6 @@ export function createPedestrians(scene, graph, rng) {
   function update(dt, ctx) {
     const d = Math.min(Math.max(dt || 0, 0), 0.1);
     if (ctx) lastCtx = ctx;
-    const colliders = ctx && ctx.city ? ctx.city.colliders : null;
 
     if (ctx && ctx.crime && ctx.crime.pos) {
       const key = `${ctx.crime.t || 0}|${ctx.crime.pos.x},${ctx.crime.pos.z}`;
@@ -259,7 +246,6 @@ export function createPedestrians(scene, graph, rng) {
       w.mesh.rotation.y = w.heading;
       w.mesh.position.y = w.speed > 0.1 ? Math.abs(Math.sin(Date.now() * 0.008 + w.pos.x)) * 0.05 : 0;
     }
-    void colliders;
   }
 
   return { walkers, update, reportCrime };

@@ -20,25 +20,23 @@ function storage() {
 }
 
 function migrate(data) {
-  let v = typeof data.version === 'number' ? Math.floor(data.version) : 1;
+  const v = typeof data.version === 'number' ? Math.floor(data.version) : 1;
   if (v > SAVE_VERSION) return null; // save
-  while (v < SAVE_VERSION) {
-    v += 1;
-  }
-  data.version = v;
+  data.version = SAVE_VERSION;
   return data;
 }
 
 function validate(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
-  const migrated = migrate(data);
-  if (!migrated) return null;
-  if (migrated.money !== undefined && typeof migrated.money !== 'number') return null;
-  if (migrated.health !== undefined && typeof migrated.health !== 'number') return null;
-  if (migrated.timeHours !== undefined && typeof migrated.timeHours !== 'number') return null;
-  if (migrated.missionsCompleted !== undefined && !Array.isArray(migrated.missionsCompleted)) return null;
-  if (migrated.ownedCars !== undefined && !Array.isArray(migrated.ownedCars)) return null;
-  return migrated;
+  const m = migrate(data);
+  if (!m) return null;
+  for (const k of ['money', 'health', 'timeHours']) {
+    if (m[k] !== undefined && typeof m[k] !== 'number') return null;
+  }
+  for (const k of ['missionsCompleted', 'ownedCars']) {
+    if (m[k] !== undefined && !Array.isArray(m[k])) return null;
+  }
+  return m;
 }
 
 function tryParse(raw) {
@@ -115,29 +113,5 @@ export function createSaveSystem() {
     return load(slot) !== null;
   }
 
-  function deleteSave(slot) {
-    if (!isValidSlot(slot)) return false;
-    const store = storage();
-    if (!store) return false;
-    const key = keyFor(slot);
-    try {
-      store.removeItem(key);
-      store.removeItem(key + '.bak');
-      store.removeItem(key + '.tmp');
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function listSlots() {
-    const out = [];
-    for (const slot of VALID_SLOTS) {
-      const data = load(slot);
-      if (data) out.push({ slot, savedAt: data.savedAt || null });
-    }
-    return out;
-  }
-
-  return { save, load, hasSave, deleteSave, listSlots };
+  return { save, load, hasSave };
 }

@@ -1,4 +1,5 @@
 import { clamp, turnToward } from './vehicles.js';
+import { nodePos } from './police-pursuit.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
 
@@ -10,12 +11,6 @@ function randomNode(graph, rand) {
   if (graph && Array.isArray(graph.nodes) && graph.nodes.length) {
     return graph.nodes[Math.floor(rand() * graph.nodes.length)];
   }
-  return null;
-}
-
-function nodePos(graph, id) {
-  if (graph && graph.nodeById && graph.nodeById.get(id)) return graph.nodeById.get(id);
-  if (graph && Array.isArray(graph.nodes)) return graph.nodes.find((n) => n.id === id) || null;
   return null;
 }
 
@@ -36,11 +31,10 @@ export function createTraffic(scene, graph, fleet, rng) {
   function newRoute(car) {
     const from = graph && typeof graph.nearestNode === 'function'
       ? graph.nearestNode(car.pos.x, car.pos.z) : randomNode(graph, rand);
-    const fromId = from && from.id !== undefined ? from.id : (from ? from : null);
+    const fromId = from ? from.id : null;
     const dest = randomNode(graph, rand);
     if (!fromId || !dest) { car._t.route = []; return; }
-    const destId = dest.id !== undefined ? dest.id : dest;
-    car._t.route = planRoute(graph, fromId, destId);
+    car._t.route = planRoute(graph, fromId, dest.id);
     car._t.wp = 0;
     if (car._t.route.length && String(car._t.route[0]) === String(fromId)) car._t.wp = 1;
   }

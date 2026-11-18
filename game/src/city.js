@@ -14,6 +14,11 @@ function canvasTexture(w, h, draw) {
 }
 
 /** Facade: flat pastel wall with a grid of lit/unlit windows (deterministic per seed). */
+function win(g, c, r, cols, rows, w, h) {
+  g.fillRect(10 + c * ((w - 20) / cols) + 3, 18 + r * ((h - 30) / rows) + 3,
+    (w - 20) / cols - 6, (h - 30) / rows - 8);
+}
+
 function facadeTextures(base, rng, litRatio) {
   const cols = 4 + Math.floor(rng() * 3);
   const rows = 5 + Math.floor(rng() * 4);
@@ -26,8 +31,7 @@ function facadeTextures(base, rng, litRatio) {
       for (let c = 0; c < cols; c += 1) {
         const lit = rng() < litRatio;
         g.fillStyle = lit ? '#ffe9a8' : '#23414f';
-        g.fillRect(10 + c * ((w - 20) / cols) + 3, 18 + r * ((h - 30) / rows) + 3,
-          (w - 20) / cols - 6, (h - 30) / rows - 8);
+        win(g, c, r, cols, rows, w, h);
       }
     }
   });
@@ -38,8 +42,7 @@ function facadeTextures(base, rng, litRatio) {
       for (let c = 0; c < cols; c += 1) {
         if (rng() < litRatio) {
           g.fillStyle = '#ffd27a';
-          g.fillRect(10 + c * ((w - 20) / cols) + 3, 18 + r * ((h - 30) / rows) + 3,
-            (w - 20) / cols - 6, (h - 30) / rows - 8);
+          win(g, c, r, cols, rows, w, h);
         }
       }
     }
@@ -92,7 +95,6 @@ export function buildCity(scene, graph, rng) {
   group.add(beach);
 
   const asphaltTex = roadTexture();
-  const roadMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   const sidewalkMat = new THREE.MeshStandardMaterial({ color: PALETTE.sidewalk, roughness: 1 });
   for (const edge of graph.edges) {
     const a = graph.nodeById.get(edge.a);
@@ -119,7 +121,6 @@ export function buildCity(scene, graph, rng) {
     road.position.set(mx, 0.05, mz);
     road.receiveShadow = true;
     group.add(road);
-    void roadMat;
   }
 
   const dialects = {
@@ -135,7 +136,8 @@ export function buildCity(scene, graph, rng) {
       map, emissiveMap, emissive: 0xffd27a, emissiveIntensity: 0, roughness: 0.85,
     });
     mat.userData.glow = true;
-    facadeMats[key] = { mat, roof: d.roof, hMin: d.hMin, hMax: d.hMax };
+    const roofMat = new THREE.MeshStandardMaterial({ color: d.roof, roughness: 0.9 });
+    facadeMats[key] = { mat, roofMat, hMin: d.hMin, hMax: d.hMax };
   }
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const roofGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -162,7 +164,7 @@ export function buildCity(scene, graph, rng) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         group.add(mesh);
-        const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ color: d.roof, roughness: 0.9 }));
+        const roof = new THREE.Mesh(roofGeo, d.roofMat);
         roof.scale.set(w + 0.8, 0.8, dep + 0.8);
         roof.position.set(x, h + 0.4, z);
         group.add(roof);
@@ -181,8 +183,9 @@ export function buildCity(scene, graph, rng) {
   tower.position.set(20, 36, -20);
   tower.castShadow = true;
   group.add(tower);
-  const towerTop = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({ color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0.4 }));
-  towerTop.material.userData.glow = true;
+  const towerTopMat = new THREE.MeshStandardMaterial({ color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0.4 });
+  towerTopMat.userData.glow = true;
+  const towerTop = new THREE.Mesh(boxGeo, towerTopMat);
   towerTop.scale.set(24, 2, 24);
   towerTop.position.set(20, 73, -20);
   group.add(towerTop);

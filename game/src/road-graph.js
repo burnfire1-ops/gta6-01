@@ -61,8 +61,6 @@ export function createRoadGraph() {
   const stNode = stIx >= 0 ? nodeById.get(nodeId(stIx, stIx)) : null;
   if (stNode) stNode.policeStation = true;
 
-  const portNode = nodeId(0, 9); //
-  void portNode;
   const bridgeStart = nodeId(0, 8); // (-220
   const b0 = 1000;
   const b1 = 1001;
@@ -151,7 +149,6 @@ export function createRoadGraph() {
         return path;
       }
       closed.add(current);
-      const cur = nodeById.get(current);
       for (const { to, edge } of adjacency.get(current)) {
         if (closed.has(to)) continue;
         const tentative = gScore.get(current) + edge.length;
@@ -164,7 +161,6 @@ export function createRoadGraph() {
           else open.push({ id: to, f });
         }
       }
-      void cur;
     }
     return [];
   }

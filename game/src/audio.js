@@ -17,7 +17,6 @@ export function createAudio() {
   let musicBus = null;
   let musicDuck = null;
   let sfxBus = null;
-  let ambienceBus = null;
   let uiBus = null;
 
   let engineOsc = null;
@@ -38,6 +37,13 @@ export function createAudio() {
   let muted = false;
   let masterGainValue = 0.9;
 
+  function bus(value, dest) {
+    const g = ctx.createGain();
+    g.gain.value = value;
+    g.connect(dest);
+    return g;
+  }
+
   function ensure() {
     if (ctx) {
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -47,29 +53,11 @@ export function createAudio() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       ctx = new AC();
-      master = ctx.createGain();
-      master.gain.value = muted ? 0 : masterGainValue;
-      master.connect(ctx.destination);
-
-      musicDuck = ctx.createGain();
-      musicDuck.gain.value = sirenOn ? 0.5 : 1.0;
-      musicDuck.connect(master);
-
-      musicBus = ctx.createGain();
-      musicBus.gain.value = MOOD_GAIN[mood] || MOOD_GAIN.calm;
-      musicBus.connect(musicDuck);
-
-      sfxBus = ctx.createGain();
-      sfxBus.gain.value = 0.9;
-      sfxBus.connect(master);
-
-      ambienceBus = ctx.createGain();
-      ambienceBus.gain.value = 0.4;
-      ambienceBus.connect(master);
-
-      uiBus = ctx.createGain();
-      uiBus.gain.value = 0.8;
-      uiBus.connect(master);
+      master = bus(muted ? 0 : masterGainValue, ctx.destination);
+      musicDuck = bus(sirenOn ? 0.5 : 1.0, master);
+      musicBus = bus(MOOD_GAIN[mood] || MOOD_GAIN.calm, musicDuck);
+      sfxBus = bus(0.9, master);
+      uiBus = bus(0.8, master);
 
       startMusicScheduler();
     } catch {

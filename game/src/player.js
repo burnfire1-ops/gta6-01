@@ -1,36 +1,29 @@
 
 import * as THREE from 'three';
 import { CITY, PLAYER } from './config.js';
+import { part } from './pedestrians.js';
 
-function bodyPart(w, h, d, color, x, y, z) {
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true }),
-  );
-  mesh.position.set(x, y, z);
-  mesh.castShadow = true;
-  return mesh;
-}
+const clamp = THREE.MathUtils.clamp;
 
 export function createPlayer(scene, graph, rng) {
   const start = graph.projectToRoad(0, 40);
   const group = new THREE.Group();
   group.name = 'player-raka';
 
-  const shirt = 0xffb703; // j
-  const skin = 0xc98d64;
-  const pants = 0x2c3444;
+  const shirtM = new THREE.MeshStandardMaterial({ color: 0xffb703, roughness: 0.9, flatShading: true });
+  const skinM = new THREE.MeshStandardMaterial({ color: 0xc98d64, roughness: 0.9, flatShading: true });
+  const pantsM = new THREE.MeshStandardMaterial({ color: 0x2c3444, roughness: 0.9, flatShading: true });
 
-  const body = bodyPart(0.55, 0.7, 0.3, shirt, 0, 1.15, 0);
+  const body = part(0.55, 0.7, 0.3, shirtM, 0, 1.15, 0);
   group.add(body);
 
-  const head = bodyPart(0.4, 0.4, 0.4, skin, 0, 1.7, 0);
+  const head = part(0.4, 0.4, 0.4, skinM, 0, 1.7, 0);
   group.add(head);
-  const cap = bodyPart(0.46, 0.08, 0.46, pants, 0, 1.94, 0);
+  const cap = part(0.46, 0.08, 0.46, pantsM, 0, 1.94, 0);
   group.add(cap);
 
-  const armL = bodyPart(0.16, 0.65, 0.16, skin, -0.36, 1.15, 0);
-  const armR = bodyPart(0.16, 0.65, 0.16, skin, 0.36, 1.15, 0);
+  const armL = part(0.16, 0.65, 0.16, skinM, -0.36, 1.15, 0);
+  const armR = part(0.16, 0.65, 0.16, skinM, 0.36, 1.15, 0);
   armL.geometry.translate(0, -0.28, 0);
   armR.geometry.translate(0, -0.28, 0);
   armL.position.y = 1.45;
@@ -38,8 +31,8 @@ export function createPlayer(scene, graph, rng) {
   group.add(armL);
   group.add(armR);
 
-  const legL = bodyPart(0.22, 0.8, 0.22, pants, -0.2, 0.42, 0);
-  const legR = bodyPart(0.22, 0.8, 0.22, pants, 0.2, 0.42, 0);
+  const legL = part(0.22, 0.8, 0.22, pantsM, -0.2, 0.42, 0);
+  const legR = part(0.22, 0.8, 0.22, pantsM, 0.2, 0.42, 0);
   legL.geometry.translate(0, -0.3, 0);
   legR.geometry.translate(0, -0.3, 0);
   legL.position.y = 0.8;
@@ -151,7 +144,7 @@ export function createPlayer(scene, graph, rng) {
       let dh = targetHeading - state.heading;
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
-      state.heading += THREE.MathUtils.clamp(dh, -PLAYER.turnRate * dt, PLAYER.turnRate * dt);
+      state.heading += clamp(dh, -PLAYER.turnRate * dt, PLAYER.turnRate * dt);
     } else {
       state.speed += (0 - state.speed) * Math.min(1, dt * 10);
     }
@@ -172,8 +165,8 @@ export function createPlayer(scene, graph, rng) {
     }
 
     const lim = CITY.half - 2;
-    state.pos.x = THREE.MathUtils.clamp(state.pos.x, -lim, lim);
-    state.pos.z = THREE.MathUtils.clamp(state.pos.z, -lim, lim);
+    state.pos.x = clamp(state.pos.x, -lim, lim);
+    state.pos.z = clamp(state.pos.z, -lim, lim);
     resolveColliders(ctx.city?.colliders);
 
     state._walkPhase += dt * state.speed * 2.2;

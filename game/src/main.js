@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { CITY, DAY_LENGTH_SECONDS, MISSIONS, SEED } from './config.js';
+import { MISSIONS, SEED } from './config.js';
 import { createRandom } from './random.js';
 import { createRoadGraph } from './road-graph.js';
 import { buildCity } from './city.js';
@@ -119,15 +119,8 @@ function showScreen(name) {
   screen = name;
   const gameoverMenu = document.getElementById('menu-gameover');
   if (gameoverMenu) gameoverMenu.style.display = name === 'gameover' ? 'flex' : 'none';
-  if (name === 'play') {
-    hud.hideMenus();
-  } else if (name === 'title') {
-    hud.showMenu('title');
-  } else if (name === 'paused') {
-    hud.showMenu('pause');
-  } else if (name === 'gameover') {
-    hud.showMenu('none');
-  }
+  if (name === 'play') hud.hideMenus();
+  else hud.showMenu(name === 'title' ? 'title' : name === 'paused' ? 'pause' : 'none');
 }
 
 function startGame(fresh) {
@@ -297,8 +290,7 @@ function runShot(name) {
     console.error('stageShot failed:', err);
   }
   if (staged && staged.screen === 'gameover') showScreen('gameover');
-  else if (staged && staged.screen === 'title') showScreen('title');
-  else showScreen('play');
+  else showScreen(staged && staged.screen === 'title' ? 'title' : 'play');
   let painted = 0;
   function paint() {
     dayNight.update(0);
@@ -347,8 +339,6 @@ function runGame() {
   showScreen('title');
   announce('Teluk Cahaya. Tekan Enter atau New Game untuk mulai.');
   renderer.setAnimationLoop(frame);
-  void CITY;
-  void DAY_LENGTH_SECONDS;
 }
 
 if (shot) runShot(shot);

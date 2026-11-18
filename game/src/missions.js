@@ -11,28 +11,32 @@ function isNight(timeHours) {
 function readInteract(input) {
   if (!input || typeof input !== 'object') return false;
   if (input.interact || input.action || input.use) return true;
-  const keys = input.keys;
-  if (!keys) return false;
-  if (typeof keys.has === 'function') return keys.has('KeyF');
-  if (Array.isArray(keys)) return keys.includes('KeyF');
-  return !!keys.KeyF;
+  const k = input.keys;
+  if (!k) return false;
+  return typeof k.has === 'function' ? k.has('KeyF')
+    : Array.isArray(k) ? k.includes('KeyF') : !!k.KeyF;
 }
 
 export function createMissions(ctx) {
   const graph = ctx && ctx.graph;
   const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
 
+  function bestNode(pred, sx, sz) {
+    let best = null;
+    let bestD = Infinity;
+    for (const n of nodes) {
+      if (pred && !pred(n)) continue;
+      const d = (n.x - sx) ** 2 + (n.z - sz) ** 2;
+      if (d < bestD) { bestD = d; best = n; }
+    }
+    return best;
+  }
+
   function pickNode(keywords, fallbackIdx) {
     if (keywords.includes('boulevard')) {
       const st = nodes.find((n) => n.policeStation);
       if (st) return { x: st.x, z: st.z };
-      let best = null;
-      let bestD = Infinity;
-      for (const n of nodes) {
-        if (n.district !== 'artdeco') continue;
-        const d = (n.x + 20) ** 2 + (n.z + 20) ** 2;
-        if (d < bestD) { bestD = d; best = n; }
-      }
+      const best = bestNode((n) => n.district === 'artdeco', -20, -20);
       if (best) return { x: best.x, z: best.z };
     }
     for (const n of nodes) {
@@ -61,16 +65,19 @@ export function createMissions(ctx) {
   const neon = pickNode(['neon'], 1);
   const hill = pickNode(['bukit', 'residential', 'hill'], 3);
 
-  const list = [
-    { index: 0, title: 'Paket Pertama', desc: 'Antar paket dari pelabuhan dengan mobil pinjaman. Berkendara ke marker kuning.', reward: REWARDS[0], district: 'Pelabuhan', targetPos: port },
-    { index: 1, title: 'Mobil Sendiri', desc: 'Curi mobil dari jalan, lalu bawa ke marker di Boulevard. Mobil terkunci butuh saksi yang tidak melihat.', reward: REWARDS[1], district: 'Boulevard', targetPos: boulevard },
-    { index: 2, title: 'Lolos Patroli', desc: 'Patroli mengejarmu di wanted 2. Putus garis pandang dan kabur sampai wanted 0.', reward: REWARDS[2], district: 'Boulevard', targetPos: boulevard },
-    { index: 3, title: 'Antar Malam', desc: 'Antar paket lewat Distrik Neon. Paket hanya diterima saat malam (18:00-06:00).', reward: REWARDS[3], district: 'Neon', targetPos: neon },
-    { index: 4, title: 'Kejar Target', desc: 'Target kabur dengan mobil. Tabrak mobilnya sampai hancur (health 0).', reward: REWARDS[4], district: 'Pelabuhan', targetPos: port },
-    { index: 5, title: 'Gudang Pelabuhan', desc: 'Masuk gudang dan kalahkan 3 penjaga. Dekati penjaga lalu tekan F atau E untuk memukul.', reward: REWARDS[5], district: 'Pelabuhan', targetPos: port },
-    { index: 6, title: 'Konvoi Tiga Titik', desc: 'Lewati 3 checkpoint sebelum waktu habis: Boulevard, Neon, Pelabuhan.', reward: REWARDS[6], district: 'Teluk Cahaya', targetPos: boulevard },
-    { index: 7, title: 'Pelarian Final', desc: 'Lintasi kota dengan wanted 5 dan capai ujung kota. Semua sistem sekaligus.', reward: REWARDS[7], district: 'Bukit', targetPos: hill },
+  // [judul, deskripsi, indeks reward, distrik, target]
+  const DEFS = [
+    ['Paket Pertama', 'Antar paket dari pelabuhan dengan mobil pinjaman. Berkendara ke marker kuning.', 0, 'Pelabuhan', port],
+    ['Mobil Sendiri', 'Curi mobil dari jalan, lalu bawa ke marker di Boulevard. Mobil terkunci butuh saksi yang tidak melihat.', 1, 'Boulevard', boulevard],
+    ['Lolos Patroli', 'Patroli mengejarmu di wanted 2. Putus garis pandang dan kabur sampai wanted 0.', 2, 'Boulevard', boulevard],
+    ['Antar Malam', 'Antar paket lewat Distrik Neon. Paket hanya diterima saat malam (18:00-06:00).', 3, 'Neon', neon],
+    ['Kejar Target', 'Target kabur dengan mobil. Tabrak mobilnya sampai hancur (health 0).', 4, 'Pelabuhan', port],
+    ['Gudang Pelabuhan', 'Masuk gudang dan kalahkan 3 penjaga. Dekati penjaga lalu tekan F atau E untuk memukul.', 5, 'Pelabuhan', port],
+    ['Konvoi Tiga Titik', 'Lewati 3 checkpoint sebelum waktu habis: Boulevard, Neon, Pelabuhan.', 6, 'Teluk Cahaya', boulevard],
+    ['Pelarian Final', 'Lintasi kota dengan wanted 5 dan capai ujung kota. Semua sistem sekaligus.', 7, 'Bukit', hill],
   ];
+  const list = DEFS.map(([title, desc, r, district, targetPos], index) =>
+    ({ index, title, desc, reward: REWARDS[r], district, targetPos }));
 
   const state = {
     active: null,

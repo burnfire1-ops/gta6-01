@@ -1,9 +1,21 @@
 
+import { createRandom } from './random.js';
+
 const STEP = 1 / 60;
 const SIM_SECONDS = 4;
 
 function isFn(v) {
   return typeof v === 'function';
+}
+
+function setMeshPos(o, x, z, heading) {
+  try {
+    if (o && o.mesh) {
+      o.mesh.position.set(x, 0, z);
+      o.mesh.rotation.y = heading;
+    }
+  } catch {
+  }
 }
 
 function readPos(obj) {
@@ -52,19 +64,9 @@ function setVehicleHeading(vehicle, radians) {
   }
 }
 
-function mulberry32(seed) {
-  let a = seed | 0;
-  return function random() {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function pickRoadNode(graph, prefer, rng) {
   if (!graph) return { x: 0, z: 0 };
-  const rand = typeof rng === 'function' ? rng : mulberry32(1);
+  const rand = typeof rng === 'function' ? rng : createRandom(1);
   try {
     if (prefer && isFn(graph.nearestNode)) {
       const p = readPos(graph.nearestNode(prefer.x, prefer.z));
@@ -192,13 +194,7 @@ function framePursuitUnits(g, count) {
     u.car.speed = 0;
     u.car.sirenOn = true;
     u.state = 'pursue';
-    try {
-      if (u.car.mesh) {
-        u.car.mesh.position.set(x, 0, z);
-        u.car.mesh.rotation.y = u.car.heading;
-      }
-    } catch {
-    }
+    setMeshPos(u.car, x, z, u.car.heading);
   }
 }
 
@@ -354,23 +350,20 @@ function stageCrowd(g) {
     if (a && typeof a.x === 'number') axisLat = (p.x - a.x) * rx + (p.z - a.z) * rz;
   } catch {
   }
+  function placeAt(o, fwd, lat, heading) {
+    const x = p.x + fx * fwd + rx * lat;
+    const z = p.z + fz * fwd + rz * lat;
+    o.pos.x = x;
+    o.pos.z = z;
+    o.heading = heading;
+    setMeshPos(o, x, z, heading);
+  }
   const walkers = g.pedestrians && Array.isArray(g.pedestrians.walkers) ? g.pedestrians.walkers : [];
   const wSpots = [6, 11, 17, 23, 29, 35];
   for (let i = 0; i < Math.min(6, walkers.length); i += 1) {
     const w = walkers[i];
     if (!w || !w.pos) continue;
-    const x = p.x + fx * wSpots[i] + rx * (side * 4.6 - axisLat);
-    const z = p.z + fz * wSpots[i] + rz * (side * 4.6 - axisLat);
-    w.pos.x = x;
-    w.pos.z = z;
-    w.heading = h;
-    try {
-      if (w.mesh) {
-        w.mesh.position.set(x, 0, z);
-        w.mesh.rotation.y = w.heading;
-      }
-    } catch {
-    }
+    placeAt(w, wSpots[i], side * 4.6 - axisLat, h);
   }
   const cars = g.traffic && Array.isArray(g.traffic.cars) ? g.traffic.cars : [];
   const cSpots = [[34, -3.2], [42, 3.2]];
@@ -378,19 +371,8 @@ function stageCrowd(g) {
     const c = cars[i];
     if (!c || !c.pos) continue;
     const s = cSpots[i % cSpots.length];
-    const x = p.x + fx * s[0] + rx * s[1];
-    const z = p.z + fz * s[0] + rz * s[1];
-    c.pos.x = x;
-    c.pos.z = z;
-    c.heading = h + Math.PI;
+    placeAt(c, s[0], s[1], h + Math.PI);
     c.speed = 0;
-    try {
-      if (c.mesh) {
-        c.mesh.position.set(x, 0, z);
-        c.mesh.rotation.y = c.heading;
-      }
-    } catch {
-    }
   }
   // Singkirkan NPC liar dari zona kamera (<12/<15 unit bisa menutupi lensa).
   // Pindah jauh ke depan, sisi seberang, supaya tidak memblokir.
@@ -398,60 +380,24 @@ function stageCrowd(g) {
     const w = walkers[i];
     if (!w || !w.pos) continue;
     if (Math.hypot(w.pos.x - p.x, w.pos.z - p.z) >= 12) continue;
-    const fwd = 48 + (i % 3) * 8;
-    const x = p.x + fx * fwd + rx * (-side * 4.6 - axisLat);
-    const z = p.z + fz * fwd + rz * (-side * 4.6 - axisLat);
-    w.pos.x = x;
-    w.pos.z = z;
-    w.heading = h;
-    try {
-      if (w.mesh) {
-        w.mesh.position.set(x, 0, z);
-        w.mesh.rotation.y = w.heading;
-      }
-    } catch {
-    }
+    placeAt(w, 48 + (i % 3) * 8, -side * 4.6 - axisLat, h);
   }
   for (let i = 2; i < cars.length; i += 1) {
     const c = cars[i];
     if (!c || !c.pos) continue;
     if (Math.hypot(c.pos.x - p.x, c.pos.z - p.z) >= 15) continue;
-    const fwd = 52 + (i % 3) * 8;
-    const x = p.x + fx * fwd + rx * -side * 3.2;
-    const z = p.z + fz * fwd + rz * -side * 3.2;
-    c.pos.x = x;
-    c.pos.z = z;
-    c.heading = h + Math.PI;
+    placeAt(c, 52 + (i % 3) * 8, -side * 3.2, h + Math.PI);
     c.speed = 0;
-    try {
-      if (c.mesh) {
-        c.mesh.position.set(x, 0, z);
-        c.mesh.rotation.y = c.heading;
-      }
-    } catch {
-    }
   }
 }
 
 function startFirstMission(game, want) {
   const missions = game.missions;
   if (!missions || !isFn(missions.startMission)) return;
-  if (want !== undefined) {
-    try {
-      missions.startMission(want);
-      return;
-    } catch {
-    }
-  }
-  const tries = [1, 0, 'misi-1', 'mission-1'];
-  try {
-    if (Array.isArray(missions.list) && missions.list.length > 0) {
-      const first = missions.list[0];
-      if (first && first.index !== undefined) tries.unshift(first.index);
-    }
-  } catch {
-  }
-  for (const id of tries) {
+  const first = Array.isArray(missions.list) && missions.list.length > 0 ? missions.list[0] : null;
+  const fi = first && first.index !== undefined ? first.index : 1;
+  const ids = want !== undefined ? [want] : [fi, 1, 0, 'misi-1', 'mission-1'];
+  for (const id of ids) {
     try {
       missions.startMission(id);
       return;
@@ -523,9 +469,8 @@ function frameChaseCamera(game) {
   try {
     const camera = game.camera;
     const player = game.player;
-    if (!camera || !player) return;
-    if (!camera.position || typeof camera.position.set !== 'function') return;
-    if (typeof camera.lookAt !== 'function') return;
+    if (!camera || !player || !camera.position || typeof camera.position.set !== 'function'
+      || typeof camera.lookAt !== 'function') return;
     const p = readPos(player);
     if (!p) return;
     const h = typeof player.heading === 'number' ? player.heading : 0;
@@ -537,68 +482,53 @@ function frameChaseCamera(game) {
   }
 }
 
+function stageDrive(g, o) {
+  setTime(g, o.time);
+  const node = o.edge ? pickEdgeNode(g.graph) : pickRoadNode(g.graph, { x: 0, z: 0 }, o.rng);
+  // Hadap sepanjang jalan ke tengah kota, bukan diagonal keluar peta.
+  const head = o.edge
+    ? (Math.abs(node.x) >= Math.abs(node.z)
+      ? (node.x > 0 ? -Math.PI / 2 : Math.PI / 2)
+      : (node.z > 0 ? Math.PI : 0))
+    : 0;
+  if (g.player) {
+    writePos(g.player, node.x, node.z);
+    setHeading(g.player, head);
+  }
+  const vehicle = findOrSpawnVehicle(g, node);
+  enterVehicle(g, vehicle);
+  setVehicleHeading(vehicle, head);
+  brightenCar(vehicle, o.night);
+  setWanted(g, o.wanted);
+  spawnPursuit(g, o.units);
+  startFirstMission(g, o.mission);
+  advanceSim(g, SIM_SECONDS);
+  if (g.police && Array.isArray(g.police.units) && g.police.units.length < o.minUnits) {
+    spawnPursuit(g, o.units);
+    advanceSim(g, 1);
+  }
+  framePursuitUnits(g, o.units);
+  stageCrowd(g);
+  if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
+  frameChaseCamera(g);
+  pushHudState(g);
+  return { screen: 'play' };
+}
+
 export function stageShot(name, game) {
   const g = game || {};
-  const rng = typeof g.rng === 'function' ? g.rng : mulberry32(1);
+  const rng = typeof g.rng === 'function' ? g.rng : createRandom(1);
   if (g.police && isFn(g.police.setAutoSpawn)) g.police.setAutoSpawn(false);
   if (g.police && isFn(g.police.clearUnits)) g.police.clearUnits();
 
   if (name === 'play') {
-    setTime(g, 17.5);
-    const node = pickRoadNode(g.graph, { x: 0, z: 0 }, rng);
-    if (g.player) {
-      writePos(g.player, node.x, node.z);
-      setHeading(g.player, 0);
-    }
-    const vehicle = findOrSpawnVehicle(g, node);
-    enterVehicle(g, vehicle);
-    setVehicleHeading(vehicle, 0);
-    brightenCar(vehicle, false);
-    setWanted(g, 2);
-    spawnPursuit(g, 2);
-    startFirstMission(g);
-    advanceSim(g, SIM_SECONDS);
-    if (g.police && Array.isArray(g.police.units) && g.police.units.length === 0) {
-      spawnPursuit(g, 2);
-      advanceSim(g, 1);
-    }
-    framePursuitUnits(g, 2);
-    stageCrowd(g);
-    if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
-    frameChaseCamera(g);
-    pushHudState(g);
-    return { screen: 'play' };
+    return stageDrive(g, { time: 17.5, rng, night: false, wanted: 2, units: 2, minUnits: 1 });
   }
 
   if (name === 'end') {
-    setTime(g, 21);
-    const node = pickEdgeNode(g.graph);
-    // Hadap sepanjang jalan ke tengah kota, bukan diagonal keluar peta.
-    const head = Math.abs(node.x) >= Math.abs(node.z)
-      ? (node.x > 0 ? -Math.PI / 2 : Math.PI / 2)
-      : (node.z > 0 ? Math.PI : 0);
-    if (g.player) {
-      writePos(g.player, node.x, node.z);
-      setHeading(g.player, head);
-    }
-    const vehicle = findOrSpawnVehicle(g, node);
-    enterVehicle(g, vehicle);
-    setVehicleHeading(vehicle, head);
-    brightenCar(vehicle, true);
-    setWanted(g, 5);
-    spawnPursuit(g, 4);
-    startFirstMission(g, 3);
-    advanceSim(g, SIM_SECONDS);
-    if (g.police && Array.isArray(g.police.units) && g.police.units.length < 4) {
-      spawnPursuit(g, 4);
-      advanceSim(g, 1);
-    }
-    framePursuitUnits(g, 4);
-    stageCrowd(g);
-    if (g.hud && isFn(g.hud.showMenu)) g.hud.showMenu('none');
-    frameChaseCamera(g);
-    pushHudState(g);
-    return { screen: 'play' };
+    return stageDrive(g, {
+      time: 21, edge: true, rng, night: true, wanted: 5, units: 4, mission: 3, minUnits: 4,
+    });
   }
 
   setTime(g, 10);

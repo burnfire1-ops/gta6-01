@@ -3,19 +3,18 @@ import { clamp, turnToward } from './vehicles.js';
 
 const ROAD_BAND = (CFG.POLICE && typeof CFG.POLICE.roadBand === 'number')
   ? CFG.POLICE.roadBand : 3.0;
-const SPORT_MAX = (CFG.VEHICLE && CFG.VEHICLE.sport && typeof CFG.VEHICLE.sport.maxSpeed === 'number')
-  ? CFG.VEHICLE.sport.maxSpeed : 38;
-const POLICE_MAX = SPORT_MAX * 0.92; // sedi
-const UNITS_PER_LEVEL = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
+const SPORT_MAX = 38; // top speed mobil sport pemain (vehicles.js)
+const POLICE_MAX = SPORT_MAX * 0.92; // sedikit di bawah sport: kabur selalu mungkin
+const UNITS_PER_LEVEL = [0, 1, 2, 3, 4, 5];
 
-function nodePos(graph, id) {
+export function nodePos(graph, id) {
   if (graph && graph.nodeById && graph.nodeById.get(id)) return graph.nodeById.get(id);
   if (graph && Array.isArray(graph.nodes)) return graph.nodes.find((n) => n.id === id) || null;
   return null;
 }
 
 /** Garis pandang: 3 sample point di segmen a->b terhadap collider gedung. */
-function hasLineOfSight(a, b, colliders) {
+export function hasLineOfSight(a, b, colliders) {
   if (!colliders || !colliders.length) return true;
   for (const s of [0.25, 0.5, 0.75]) {
     const x = a.x + (b.x - a.x) * s;
@@ -25,6 +24,22 @@ function hasLineOfSight(a, b, colliders) {
     }
   }
   return true;
+}
+
+/** Pilih node jauh dari target: tier pertama yang punya kandidat menang.
+ *  tiers = [jarakMin, dotMax] (dotMax null = tanpa syarat arah pandang).
+ *  top3 = pilih acak dari 3 terjauh, bukan dari semua kandidat. */
+function farNode(nodes, tp, vd, rand, tiers, top3) {
+  const dist = (n) => Math.hypot(n.x - tp.x, n.z - tp.z);
+  const dot = (n) => ((n.x - tp.x) * vd.x + (n.z - tp.z) * vd.z) / (dist(n) || 1);
+  for (const [minD, maxDot] of tiers) {
+    const cands = nodes.filter((n) => dist(n) > minD && (maxDot === null || dot(n) < maxDot));
+    if (cands.length) {
+      if (top3) cands.sort((a, b) => dist(b) - dist(a));
+      return cands[Math.floor(rand() * (top3 ? Math.min(3, cands.length) : cands.length))];
+    }
+  }
+  return null;
 }
 
 export function createPolice(scene, graph, fleet, rng) {
@@ -122,42 +137,17 @@ export function createPolice(scene, graph, fleet, rng) {
 
   function viewDir() {
     const ctx = S.lastCtx;
-    const yaw = ctx && typeof ctx.cameraYaw === 'number' ? ctx.cameraYaw
-      : (ctx && ctx.player && typeof ctx.player.heading === 'number' ? ctx.player.heading : 0);
+    const yaw = ctx?.cameraYaw ?? ctx?.player?.heading ?? 0;
     return { x: Math.sin(yaw), z: Math.cos(yaw) };
   }
 
-  function spawnPursuitUnit(targetPos) {
-    const tp = targetPos || (S.lastCtx && S.lastCtx.player ? S.lastCtx.player.pos : { x: 0, z: 0 });
-    const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
-    const vd = viewDir();
-    let best = null;
-    const tiers = [
-      (n) => Math.hypot(n.x - tp.x, n.z - tp.z) > 45
-        && ((n.x - tp.x) * vd.x + (n.z - tp.z) * vd.z) / (Math.hypot(n.x - tp.x, n.z - tp.z) || 1) < 0.3,
-      (n) => Math.hypot(n.x - tp.x, n.z - tp.z) > 40,
-      () => true,
-    ];
-    for (const test of tiers) {
-      const cands = nodes.filter(test);
-      if (cands.length) {
-        cands.sort((a, b) =>
-          Math.hypot(b.x - tp.x, b.z - tp.z) - Math.hypot(a.x - tp.x, a.z - tp.z));
-        best = cands[Math.floor(rand() * Math.min(3, cands.length))];
-        break;
-      }
-    }
-    const car = fleet.spawnCar('police', best || { x: tp.x + 60, z: tp.z });
-    car.driver = 'npc';
-    car.sirenOn = true;
-    car.maxSpeed = POLICE_MAX;
-    const unit = {
-      car,
-      state: 'pursue',
+  function newUnit(car, state) {
+    return {
+      car, state,
       path: [], wp: 0,
       perceptionTimer: rand() * 0.2,
       canSee: false,
-      lastKnown: { x: tp.x, z: tp.z },
+      lastKnown: { x: car.pos.x, z: car.pos.z },
       lastSeenT: -100,
       repathTimer: 0,
       lastRepathTarget: null,
@@ -169,6 +159,18 @@ export function createPolice(scene, graph, fleet, rng) {
       ramCooldown: 0,
       stateTime: 0,
     };
+  }
+
+  function spawnPursuitUnit(targetPos) {
+    const tp = targetPos || (S.lastCtx && S.lastCtx.player ? S.lastCtx.player.pos : { x: 0, z: 0 });
+    const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
+    const best = farNode(nodes, tp, viewDir(), rand, [[45, 0.3], [40, null], [-1, null]], true);
+    const car = fleet.spawnCar('police', best || { x: tp.x + 60, z: tp.z });
+    car.driver = 'npc';
+    car.sirenOn = true;
+    car.maxSpeed = POLICE_MAX;
+    const unit = newUnit(car, 'pursue');
+    unit.lastKnown = { x: tp.x, z: tp.z };
     repath(unit, pinTargetToRoad(tp.x, tp.z));
     api.units.push(unit);
     return unit;
@@ -182,15 +184,7 @@ export function createPolice(scene, graph, fleet, rng) {
     car.driver = 'npc';
     car.sirenOn = false;
     car.maxSpeed = POLICE_MAX;
-    const unit = {
-      car, state: 'patrol', path: [], wp: 0,
-      perceptionTimer: rand() * 0.2, canSee: false,
-      lastKnown: { x: car.pos.x, z: car.pos.z }, lastSeenT: -100,
-      repathTimer: 0, lastRepathTarget: null,
-      searchTimer: 0, giveupTimer: 0, stuckTimer: 0, stuckCount: 0,
-      lastProgress: { x: car.pos.x, z: car.pos.z },
-      ramCooldown: 0, stateTime: 0,
-    };
+    const unit = newUnit(car, 'patrol');
     const dest = graph && typeof graph.randomRoadNode === 'function'
       ? graph.randomRoadNode(rand, 0) : null;
     if (dest) repath(unit, { x: dest.x, z: dest.z });
@@ -493,22 +487,8 @@ export function createPolice(scene, graph, fleet, rng) {
         if (target && u.stuckCount >= 2) {
           const nodes = graph && Array.isArray(graph.nodes) ? graph.nodes : [];
           const pp = ctx && ctx.player ? ctx.player.pos : car.pos;
-          const vd = viewDir();
-          const dotOf = (n) => {
-            const dx = n.x - pp.x;
-            const dz = n.z - pp.z;
-            return (dx * vd.x + dz * vd.z) / (Math.hypot(dx, dz) || 1);
-          };
-          const tiers = [
-            (n) => Math.hypot(n.x - pp.x, n.z - pp.z) > 45 && dotOf(n) < 0.3,
-            (n) => Math.hypot(n.x - pp.x, n.z - pp.z) > 40 && dotOf(n) < 0.3,
-            (n) => Math.hypot(n.x - pp.x, n.z - pp.z) > 40,
-          ];
-          let pick = null;
-          for (const test of tiers) {
-            const cands = nodes.filter(test);
-            if (cands.length) { pick = cands[Math.floor(rand() * cands.length)]; break; }
-          }
+          const pick = farNode(nodes, pp, viewDir(), rand,
+            [[45, 0.3], [40, 0.3], [40, null]], false);
           if (pick) { car.pos.x = pick.x; car.pos.z = pick.z; }
           u.stuckCount = 0;
         }

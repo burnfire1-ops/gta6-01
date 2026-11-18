@@ -3,7 +3,6 @@ export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;
 export const ACTION_INTERACT = 4;
 export const ACTION_JUMP = 8;
-export const ACTION_HANDBRAKE = 16;
 export const ACTION_ATTACK = 32;
 
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
@@ -29,17 +28,19 @@ export function createInput(canvas) {
     else if (CONFIRM_KEYS.has(code)) actions |= ACTION_CONFIRM;
   }
 
+  function isMove(code) {
+    return FORWARD_KEYS.has(code) || BACK_KEYS.has(code)
+      || LEFT_KEYS.has(code) || RIGHT_KEYS.has(code);
+  }
+
   window.addEventListener('keydown', (event) => {
     if (event.repeat) {
-      if (FORWARD_KEYS.has(event.code) || BACK_KEYS.has(event.code)
-        || LEFT_KEYS.has(event.code) || RIGHT_KEYS.has(event.code)) event.preventDefault();
+      if (isMove(event.code)) event.preventDefault();
       return;
     }
     down.add(event.code);
     press(event.code);
-    if (FORWARD_KEYS.has(event.code) || BACK_KEYS.has(event.code)
-      || LEFT_KEYS.has(event.code) || RIGHT_KEYS.has(event.code)
-      || JUMP_KEYS.has(event.code) || INTERACT_KEYS.has(event.code)) {
+    if (isMove(event.code) || JUMP_KEYS.has(event.code) || INTERACT_KEYS.has(event.code)) {
       event.preventDefault();
     }
   });
@@ -94,9 +95,6 @@ export function createInput(canvas) {
     resetMouse() {
       mouseDX = 0;
       mouseDY = 0;
-    },
-    isDown(code) {
-      return down.has(code);
     },
     /** One-shot presses since the last call, as ACTION_* flags (consumed once). */
     takeActions() {

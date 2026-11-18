@@ -5,6 +5,12 @@ const MAX_WANTED = 5;
 
 const MINIMAP_RANGE = 140;
 
+/** Nilai pertama yang bukan null/undefined (alias rantai `??`). */
+function pick(...vals) {
+  for (const v of vals) if (v !== undefined && v !== null) return v;
+  return undefined;
+}
+
 function clamp(v, lo, hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
@@ -102,7 +108,6 @@ export function createHud() {
     vehicleHealth: null,
     timeHours: null,
     speedKmh: null,
-    menu: null,
   };
   let lastMinimapAt = 0;
   let lastMinimapPlayer = null;
@@ -246,8 +251,8 @@ export function createHud() {
 
   function normalize(raw) {
     const mm = raw.minimap || {};
-    const policeUnits = mm.policeUnits ?? raw.policeUnits ?? (Array.isArray(raw.police) ? raw.police : []);
-    const wanted = raw.wanted ?? 0;
+    const policeUnits = pick(mm.policeUnits, raw.policeUnits, Array.isArray(raw.police) ? raw.police : []);
+    const wanted = pick(raw.wanted, 0);
     let escaping = raw.wantedEscaping;
     if (typeof escaping !== 'boolean') {
       escaping =
@@ -257,15 +262,15 @@ export function createHud() {
         policeUnits.every((u) => u && u.canSee === false);
     }
     return {
-      health: raw.playerHealth ?? raw.health,
+      health: pick(raw.playerHealth, raw.health),
       armor: raw.armor,
       money: raw.money,
       wanted,
       escaping: !!escaping,
       missionTitle:
-        raw.missionTitle ?? (raw.mission && raw.mission.title) ?? (mm.missionTitle || null),
-      objectiveText: raw.objectiveText ?? raw.objective,
-      vehicleName: raw.vehicleName ?? raw.vehicle,
+        pick(raw.missionTitle, raw.mission && raw.mission.title, mm.missionTitle || null),
+      objectiveText: pick(raw.objectiveText, raw.objective),
+      vehicleName: pick(raw.vehicleName, raw.vehicle),
       vehicleHealth: raw.vehicleHealth,
       timeHours: raw.timeHours,
       speedKmh:
@@ -275,12 +280,12 @@ export function createHud() {
             ? raw.speed * 3.6
             : undefined,
       minimap: {
-        graph: mm.graph ?? raw.graph,
-        playerPos: mm.playerPos ?? raw.playerPos,
-        playerHeading: mm.playerHeading ?? raw.playerHeading,
+        graph: pick(mm.graph, raw.graph),
+        playerPos: pick(mm.playerPos, raw.playerPos),
+        playerHeading: pick(mm.playerHeading, raw.playerHeading),
         policeUnits,
-        missionMarker: mm.missionMarker ?? raw.missionMarker,
-        safehouse: mm.safehouse ?? raw.safehouse,
+        missionMarker: pick(mm.missionMarker, raw.missionMarker),
+        safehouse: pick(mm.safehouse, raw.safehouse),
       },
     };
   }
@@ -319,14 +324,11 @@ export function createHud() {
         last.wanted = wanted;
         last.escaping = escaping;
         if (el.wantedStars) {
-          el.wantedStars.textContent = '';
-          for (let i = 0; i < MAX_WANTED; i += 1) {
-            const span = document.createElement('span');
+          el.wantedStars.innerHTML = Array.from({ length: MAX_WANTED }, (_, i) => {
             const filled = i < wanted;
-            span.textContent = filled ? STAR_FULL : STAR_EMPTY;
-            span.className = filled ? (escaping ? 'hot' : '') : 'off';
-            el.wantedStars.appendChild(span);
-          }
+            const cls = filled ? (escaping ? 'hot' : '') : 'off';
+            return `<span class="${cls}">${filled ? STAR_FULL : STAR_EMPTY}</span>`;
+          }).join('');
           el.wantedStars.setAttribute('aria-label', `Wanted level ${wanted} dari ${MAX_WANTED}`);
         }
       }
@@ -413,9 +415,9 @@ export function createHud() {
     show(el.menuTitle, name === 'title');
     show(el.menuPause, name === 'pause');
     show(el.menuControls, name === 'controls');
-    last.menu = name;
     const visible =
-      name === 'title' ? el.menuTitle : name === 'pause' ? el.menuPause : name === 'controls' ? el.menuControls : null;
+      name === 'title' ? el.menuTitle : name === 'pause' ? el.menuPause
+        : name === 'controls' ? el.menuControls : null;
     if (visible) {
       try {
         const btn = visible.querySelector('button');
@@ -438,57 +440,6 @@ export function createHud() {
       el.toastEl.style.display = 'none';
     }, 3000);
   }
-
-  function fire(name, detail) {
-    try {
-      window.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
-    } catch {
-    }
-  }
-
-  function wireMenuButtons(menuEl, mapping) {
-    if (!menuEl) return;
-    const buttons = menuEl.querySelectorAll('button');
-    buttons.forEach((btn) => {
-      const action = btn.getAttribute('data-action') || '';
-      const label = (btn.textContent || '').toLowerCase();
-      let hit = mapping[action];
-      if (!hit) {
-        for (const key of Object.keys(mapping)) {
-          if (label.includes(key)) {
-            hit = mapping[key];
-            break;
-          }
-        }
-      }
-      if (!hit) return;
-      btn.addEventListener('click', () => {
-        fire(hit.event, hit.detail);
-      });
-    });
-  }
-
-  wireMenuButtons(el.menuTitle, {
-    new: { event: 'telukcahaya:start', detail: { continue: false } },
-    baru: { event: 'telukcahaya:start', detail: { continue: false } },
-    continue: { event: 'telukcahaya:start', detail: { continue: true } },
-    lanjut: { event: 'telukcahaya:start', detail: { continue: true } },
-    controls: { event: 'telukcahaya:controls', detail: {} },
-    kontrol: { event: 'telukcahaya:controls', detail: {} },
-  });
-  wireMenuButtons(el.menuPause, {
-    resume: { event: 'telukcahaya:resume', detail: {} },
-    lanjut: { event: 'telukcahaya:resume', detail: {} },
-    save: { event: 'telukcahaya:save', detail: {} },
-    simpan: { event: 'telukcahaya:save', detail: {} },
-    load: { event: 'telukcahaya:load', detail: {} },
-    muat: { event: 'telukcahaya:load', detail: {} },
-    quit: { event: 'telukcahaya:quit', detail: {} },
-    keluar: { event: 'telukcahaya:quit', detail: {} },
-    judul: { event: 'telukcahaya:quit', detail: {} },
-    controls: { event: 'telukcahaya:controls', detail: {} },
-    kontrol: { event: 'telukcahaya:controls', detail: {} },
-  });
 
   return { update, setObjective, showMenu, hideMenus, toast };
 }

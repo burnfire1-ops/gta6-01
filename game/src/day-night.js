@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { DAY_LENGTH_SECONDS, PALETTE } from './config.js';
+import { DAY_LENGTH_SECONDS } from './config.js';
 
 const SKY_KEYS = [
   [0, 0x0d1530],
@@ -31,8 +31,6 @@ function nightFactorAt(hour) {
 }
 
 export function createDayNight(scene) {
-  const rendererTone = { toneMapping: THREE.ACESFilmicToneMapping, exposure: 1.05 };
-  void rendererTone;
   scene.background = new THREE.Color(0xaee3f5);
 
   const sun = new THREE.DirectionalLight(0xffe9c4, 2.5);
@@ -83,7 +81,6 @@ export function createDayNight(scene) {
     hemi.intensity = 0.75 * (1 - 0.6 * night);
     for (const mat of glowMats) mat.emissiveIntensity = night * 1.6;
     for (const beam of beams) beam.visible = night > 0.15;
-    return night;
   }
 
   apply(timeHours);
@@ -106,9 +103,5 @@ export function createDayNight(scene) {
         if (beam.visible) beam.rotation.y += dt * 0.9;
       }
     },
-    sun,
-    hemi,
   };
 }
-
-export { PALETTE };

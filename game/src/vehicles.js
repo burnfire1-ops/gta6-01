@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as CFG from './config.js';
 
 const FALLBACK_TYPES = {
   sedan:  { maxSpeed: 26, accel: 14, color: 0x9aa3ad },
@@ -9,17 +8,9 @@ const FALLBACK_TYPES = {
   sport:  { maxSpeed: 38, accel: 22, color: 0x14b8a6 }, // mobil hero pemain (teal)
   police: { maxSpeed: 35, accel: 20, color: 0x14181d }, // 38 * 0.92: kabur selalu mungkin
 };
-const VEHICLE_CFG = CFG.VEHICLE || {};
-export const VEHICLE_TYPES = FALLBACK_TYPES;
 
 function typeSpec(type) {
-  const fb = FALLBACK_TYPES[type] || FALLBACK_TYPES.sedan;
-  const over = VEHICLE_CFG[type] || {};
-  return {
-    maxSpeed: typeof over.maxSpeed === 'number' ? over.maxSpeed : fb.maxSpeed,
-    accel: typeof over.accel === 'number' ? over.accel : fb.accel,
-    color: over.color !== undefined ? over.color : fb.color,
-  };
+  return FALLBACK_TYPES[type] || FALLBACK_TYPES.sedan;
 }
 
 export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -49,10 +40,11 @@ export function normalizeDriveInput(input) {
     if (Array.isArray(keys)) return keys.includes(c);
     return !!keys[c];
   };
-  const fwd = !!(input.forward || input.up || input.accelerate || has('KeyW') || has('ArrowUp'));
-  const back = !!(input.back || input.down || input.brake || has('KeyS') || has('ArrowDown'));
-  const left = !!(input.left || has('KeyA') || has('ArrowLeft'));
-  const right = !!(input.right || has('KeyD') || has('ArrowRight'));
+  const any = (...codes) => codes.some(has);
+  const fwd = !!(input.forward || input.up || input.accelerate || any('KeyW', 'ArrowUp'));
+  const back = !!(input.back || input.down || input.brake || any('KeyS', 'ArrowDown'));
+  const left = !!(input.left || any('KeyA', 'ArrowLeft'));
+  const right = !!(input.right || any('KeyD', 'ArrowRight'));
   out.throttle = (fwd ? 1 : 0) - (back ? 1 : 0);
   out.steer = (left ? 1 : 0) - (right ? 1 : 0);
   out.handbrake = !!(input.handbrake || input.drift || input.space || has('Space'));
@@ -101,11 +93,11 @@ export function buildCarMesh(type) {
     const blueMat = new THREE.MeshStandardMaterial({
       color: 0x2244ff, emissive: 0x0022ff, emissiveIntensity: 2,
     });
-    const red = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.4), redMat);
-    red.position.set(-0.32, 1.66, -0.2);
-    const blue = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.4), blueMat);
-    blue.position.set(0.32, 1.66, -0.2);
-    g.add(red, blue);
+    for (const [lx, mat] of [[-0.32, redMat], [0.32, blueMat]]) {
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.4), mat);
+      lamp.position.set(lx, 1.66, -0.2);
+      g.add(lamp);
+    }
     g.userData.lightbar = { red: redMat, blue: blueMat };
   }
 

@@ -18,12 +18,15 @@ export function createChaseCamera(camera) {
   const desired = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
 
+  function dims(driving) {
+    return driving ? [DRIVE_DIST, DRIVE_HEIGHT] : [FOOT_DIST, FOOT_HEIGHT];
+  }
+
   function update(dt, target, mode, mouseDX, mouseDY) {
     yaw -= (mouseDX || 0) * 0.0028;
     pitch = THREE.MathUtils.clamp(pitch + (mouseDY || 0) * 0.0022, PITCH_MIN, PITCH_MAX);
     const driving = mode === 'drive';
-    const dist = driving ? DRIVE_DIST : FOOT_DIST;
-    const height = driving ? DRIVE_HEIGHT : FOOT_HEIGHT;
+    const [dist, height] = dims(driving);
     const rate = driving ? 6 : 8;
 
     const cosP = Math.cos(pitch);
@@ -79,11 +82,11 @@ export function createChaseCamera(camera) {
 
   function snapTo(target, mode) {
     const driving = mode === 'drive';
-    const dist = driving ? DRIVE_DIST : FOOT_DIST;
+    const [dist, height] = dims(driving);
     yaw = target.heading ?? 0;
     camera.position.set(
       target.pos.x - Math.sin(yaw) * dist,
-      (driving ? DRIVE_HEIGHT : FOOT_HEIGHT) + 1,
+      height + 1,
       target.pos.z - Math.cos(yaw) * dist,
     );
     smoothed.copy(camera.position);
