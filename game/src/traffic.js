@@ -2,6 +2,54 @@ import { clamp, turnToward } from './vehicles.js';
 import { nodePos } from './police-pursuit.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
+const LANE = 2.5; // offset lajur kanan dari as jalan (CP17)
+const CAR_GAP = 4.4; // jarak pusat minimum antar mobil (CP17)
+let sepFrame = 0;
+
+// Dorong-pisah antar mobil yang bergerak (CP17): parkir (driver null) dikecualikan.
+// Dijalankan setelah semua mobil melangkah dalam satu frame.
+function separateCars(cars) {
+  sepFrame++;
+  for (let i = 0; i < cars.length; i++) {
+    const a = cars[i];
+    if (!a || a.driver == null || !a.pos) continue;
+    for (let j = i + 1; j < cars.length; j++) {
+      const b = cars[j];
+      if (!b || b.driver == null || !b.pos) continue;
+      const dx = b.pos.x - a.pos.x;
+      const dz = b.pos.z - a.pos.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= CAR_GAP * CAR_GAP || d2 < 1e-8) continue;
+      const d = Math.sqrt(d2);
+      const nx = dx / d, nz = dz / d;
+      const push = (CAR_GAP - d) / 2;
+      a.pos.x -= nx * push; a.pos.z -= nz * push;
+      b.pos.x += nx * push; b.pos.z += nz * push;
+      const avx = Math.sin(a.heading) * a.speed, avz = Math.cos(a.heading) * a.speed;
+      const bvx = Math.sin(b.heading) * b.speed, bvz = Math.cos(b.heading) * b.speed;
+      const closing = (avx - bvx) * nx + (avz - bvz) * nz;
+      if (closing > 6) {
+        if (sepFrame - (a._sepDmg || 0) > 30) {
+          a.health = Math.max(0, a.health - Math.min(15, (closing - 6) * 1.2));
+          a._sepDmg = sepFrame;
+        }
+        if (sepFrame - (b._sepDmg || 0) > 30) {
+          b.health = Math.max(0, b.health - Math.min(15, (closing - 6) * 1.2));
+          b._sepDmg = sepFrame;
+        }
+        const as = a.speed, bs = b.speed;
+        a.speed = as * 0.3 + bs * 0.7;
+        b.speed = bs * 0.3 + as * 0.7;
+      }
+      // Crash stop: hapus laju yang mendekat. Tanpa ini, dorong posisi saja
+      // membuat dua mobil yang sama-sama ngegas selip ke samping sampai lolos.
+      const fa = Math.sin(a.heading) * nx + Math.cos(a.heading) * nz;
+      const fb = Math.sin(b.heading) * nx + Math.cos(b.heading) * nz;
+      if (fa * a.speed > 0 && Math.abs(fa) > 0.5) a.speed = 0;
+      if (fb * b.speed < 0 && Math.abs(fb) > 0.5) b.speed = 0;
+    }
+  }
+}
 
 function randomNode(graph, rand) {
   if (graph && typeof graph.randomRoadNode === 'function') {
@@ -154,9 +202,21 @@ export function createTraffic(scene, graph, fleet, rng) {
 
       car.speed += clamp(wantSpeed - car.speed, -14 * d, 8 * d);
       if (car.speed < 0.05) car.speed = 0;
-      car.heading = turnToward(car.heading, Math.atan2(dx, dz), 2.2 * d);
+      // Lajur kanan (CP17): bidik waypoint yang digeser 2,5 unit ke kanan
+      // arah ruas jalan (bukan heading mobil, supaya lajur stabil di tikungan).
+      const pv = t.wp > 0 ? nodePos(graph, t.route[t.wp - 1]) : null;
+      let ux = dx, uz = dz;
+      if (pv && (wpNode.x !== pv.x || wpNode.z !== pv.z)) {
+        const pl = Math.hypot(wpNode.x - pv.x, wpNode.z - pv.z) || 1;
+        ux = (wpNode.x - pv.x) / pl; uz = (wpNode.z - pv.z) / pl;
+      } else {
+        const dl = dist || 1; ux = dx / dl; uz = dz / dl;
+      }
+      car.heading = turnToward(car.heading,
+        Math.atan2(wpNode.x + uz * LANE - car.pos.x, wpNode.z - ux * LANE - car.pos.z), 2.2 * d);
       advance(car, d);
     }
+    separateCars(fleet.cars);
   }
 
   return { cars, update };
