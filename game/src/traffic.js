@@ -92,7 +92,7 @@ export function createTraffic(scene, graph, fleet, rng) {
     if (car._t.route.length && String(car._t.route[0]) === String(fromId)) car._t.wp = 1;
   }
 
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 28; i++) {
     const type = NPC_TYPES[Math.floor(rand() * NPC_TYPES.length)];
     const car = fleet.spawnCar(type, randomNode(graph, rand));
     car.driver = 'npc';

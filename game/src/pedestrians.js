@@ -81,7 +81,7 @@ export function createPedestrians(scene, graph, rng) {
     return w;
   }
 
-  for (let i = 0; i < 24; i++) walkers.push(makeWalker());
+  for (let i = 0; i < 48; i++) walkers.push(makeWalker());
 
   function onCrimeSeen(pos) {
     crimeSeq++;
