@@ -235,14 +235,17 @@ function handleInteract() {
 }
 
 let inSafe = false;
+let lastAutoAt = -1e4;
 function checkSafehouse() {
   const inside = Math.hypot(player.pos.x - SAFEHOUSE.x, player.pos.z - SAFEHOUSE.z) <= 10;
   if (!inside) { inSafe = false; return; }
   if (inSafe) return;
   inSafe = true;
+  const now = performance.now();
+  if (now - lastAutoAt >= 1e4) { lastAutoAt = now;
   saveSystem.save('auto', { money: game.state.money, health: player.health,
     timeHours: dayNight.timeHours, mission: missions.active,
-    packages: packages.collectedIds(), pos: player.pos });
+    packages: packages.collectedIds(), pos: player.pos }); }
   if (police.wanted > 0 && police.wanted < 3 && !police.units.some((u) => u.canSee)) {
     police.clearWanted(); game.state.wanted = 0; hud.toast('Wanted bersih — safehouse');
   } else if (police.wanted >= 3) hud.toast('Safehouse tidak bisa membersihkan wanted 3+');

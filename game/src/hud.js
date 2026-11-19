@@ -234,7 +234,7 @@ export function createHud() {
 
     mm.save();
     mm.translate(cx, cy);
-    mm.rotate(headingToAngle(data.playerHeading));
+    mm.rotate(Math.PI - headingToAngle(data.playerHeading));
     mm.fillStyle = '#f2c94c';
     mm.strokeStyle = '#11141b';
     mm.lineWidth = 1;
