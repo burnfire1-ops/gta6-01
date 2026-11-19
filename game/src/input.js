@@ -90,6 +90,7 @@ export function createInput(canvas) {
     get sprint() {
       return anyDown(SPRINT_KEYS);
     },
+    get handbrake() { return down.has('Space'); }, // CP19: held-state, tanpa konsumsi takeActions()
     get mouseDX() {
       return mouseDX;
     },

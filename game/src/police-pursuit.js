@@ -382,8 +382,9 @@ export function createPolice(scene, graph, fleet, rng) {
       && Math.abs(player.speed || 0) < 0.5
       && Math.abs(player.currentCar.speed || 0) < 0.5;
     if (api.wanted > 0 && (player.onFoot || stoppedInCar)) {
+      const capR = stoppedInCar ? 5.5 : 3; // CP19: separasi 4.4 > 3, in-car tak pernah kena
       const close = api.units.some((u) => u.state === 'pursue'
-        && Math.hypot(u.car.pos.x - pPos.x, u.car.pos.z - pPos.z) < 3);
+        && Math.hypot(u.car.pos.x - pPos.x, u.car.pos.z - pPos.z) < capR);
       S.captureTimer = close ? S.captureTimer + d : 0;
       if (S.captureTimer >= 2) {
         S.captureTimer = 0;

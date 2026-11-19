@@ -41,6 +41,7 @@ export function normalizeDriveInput(input) {
     if (f || s) {
       out.throttle = clamp(f, -1, 1);
       out.steer = clamp(-s, -1, 1);
+      out.handbrake = !!input.handbrake; // CP19: Space saat W/A/S/D ditahan
       return out;
     }
   }
