@@ -71,7 +71,7 @@ export function buildCity(scene, graph, rng) {
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(CITY.size + 40, CITY.size + 40),
-    new THREE.MeshStandardMaterial({ color: 0xc9d6a0, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0xa8d64e, roughness: 1 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -123,10 +123,10 @@ export function buildCity(scene, graph, rng) {
   }
 
   const dialects = {
-    artdeco: { base: '#ffb08a', hMin: 10, hMax: 22, lit: 0.35, roof: 0xe86a5a },
-    neon: { base: '#7fd4d0', hMin: 18, hMax: 38, lit: 0.55, roof: 0xff5da2 },
-    port: { base: '#b0a89c', hMin: 8, hMax: 14, lit: 0.25, roof: 0x6b6259 },
-    residential: { base: '#ffe8c9', hMin: 8, hMax: 16, lit: 0.4, roof: 0x9fc98a },
+    artdeco: { base: '#ff9e57', hMin: 10, hMax: 22, lit: 0.35, roof: 0xff4b2e },
+    neon: { base: '#17ddd6', hMin: 18, hMax: 38, lit: 0.55, roof: 0xff1f8a },
+    port: { base: '#c99a5f', hMin: 8, hMax: 14, lit: 0.25, roof: 0x7a4a2e },
+    residential: { base: '#ffd27a', hMin: 8, hMax: 16, lit: 0.4, roof: 0x2ec96a },
   };
   const facadeMats = {};
   for (const [key, d] of Object.entries(dialects)) {
@@ -248,7 +248,7 @@ export function buildCity(scene, graph, rng) {
   for (const edge of graph.edges) {
     const a = graph.nodeById.get(edge.a);
     const b = graph.nodeById.get(edge.b);
-    if (rng() < 0.55) {
+    if (rng() < 0.75) {
       const t = 0.25 + rng() * 0.5;
       const px = a.x + (b.x - a.x) * t;
       const pz = a.z + (b.z - a.z) * t;
@@ -261,7 +261,7 @@ export function buildCity(scene, graph, rng) {
   const crownGeo = new THREE.IcosahedronGeometry(2.1, 0);
   crownGeo.scale(1, 0.45, 1);
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 1 });
-  const crownMat = new THREE.MeshStandardMaterial({ color: 0x3f9e57, roughness: 1, flatShading: true });
+  const crownMat = new THREE.MeshStandardMaterial({ color: 0x0ec957, roughness: 1, flatShading: true });
   const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, Math.max(1, palmSpots.length));
   const crowns = new THREE.InstancedMesh(crownGeo, crownMat, Math.max(1, palmSpots.length));
   const m4 = new THREE.Matrix4();

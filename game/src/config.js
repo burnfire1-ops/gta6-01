@@ -13,11 +13,11 @@ export const CITY = {
 };
 
 export const PALETTE = {
-  tealSea: 0x2ec4b6,
-  neonPink: 0xff5da2,
-  sand: 0xe8d9b0,
-  sidewalk: 0xcfc4ae,
-  glassTeal: 0x7fd4d0,
+  tealSea: 0x00d0b8,
+  neonPink: 0xff1f8a,
+  sand: 0xf2c95e,
+  sidewalk: 0xe0bf7d,
+  glassTeal: 0x17ddd6,
 };
 
 export const PLAYER = {

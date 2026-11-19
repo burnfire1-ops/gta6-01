@@ -127,16 +127,23 @@ export function buildCarMesh(type) {
     g.add(h, t);
   }
 
+  // Hubcap perak terang: muka roda (grup 1/2 silinder) kebaca di aspal gelap.
+  const hubMat = new THREE.MeshStandardMaterial({ color: 0xe8ebee, emissive: 0x555555, emissiveIntensity: 0.6 });
   const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 14);
   const wheels = [];
   for (const [wx, wz] of [[-0.95, 1.35], [0.95, 1.35], [-0.95, -1.35], [0.95, -1.35]]) {
-    const w = new THREE.Mesh(wheelGeo, dark);
+    const w = new THREE.Mesh(wheelGeo, [dark, hubMat, hubMat]);
     w.position.set(wx, 0.36, wz);
     w.rotation.z = Math.PI / 2;
     w.castShadow = true;
     g.add(w);
     wheels.push(w);
   }
+  // Blob shadow: mobil nempel di jalan.
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 4.8), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.35, depthWrite: false }));
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.y = 0.08;
+  g.add(blob);
   g.userData.wheels = wheels;
   g.userData.type = type;
   return g;
