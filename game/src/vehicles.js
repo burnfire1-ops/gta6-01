@@ -31,6 +31,19 @@ export function normalizeDriveInput(input) {
     out.handbrake = !!input.handbrake;
     return out;
   }
+  // CP18: input live (createInput) hanya mengekspos axes — baca itu dulu.
+  // forward +1 = W (maju), strafe +1 = D (kanan); steer legacy A=+1/D=-1,
+  // jadi steer = -strafe (A belok kiri, D belok kanan; diverifikasi empiris).
+  const ax = input.axes;
+  if (ax && typeof ax === 'object') {
+    const f = typeof ax.forward === 'number' ? ax.forward : 0;
+    const s = typeof ax.strafe === 'number' ? ax.strafe : 0;
+    if (f || s) {
+      out.throttle = clamp(f, -1, 1);
+      out.steer = clamp(-s, -1, 1);
+      return out;
+    }
+  }
   const keys = input.keys;
   const has = (c) => {
     if (!keys) return false;
