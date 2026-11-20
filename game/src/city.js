@@ -54,8 +54,7 @@ function roadTexture() {
     g.fillStyle = '#333a4a';
     g.fillRect(0, 0, w, h);
     g.fillStyle = '#f4f1e6';
-    g.fillRect(8, h / 2 - 2, 44, 4);
-    g.fillRect(76, h / 2 - 2, 44, 4);
+    g.fillRect(w / 2 - 3, 4, 6, 24);
   });
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
@@ -110,7 +109,7 @@ export function buildCity(scene, graph, rng) {
     group.add(walk);
     const tex = asphaltTex.clone();
     tex.needsUpdate = true;
-    tex.repeat.set(Math.max(1, Math.round(len / 16)), 1);
+    tex.repeat.set(1, Math.max(1, Math.round(len / 16)));
     const road = new THREE.Mesh(
       new THREE.PlaneGeometry(7.5, len),
       new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }),
@@ -149,10 +148,10 @@ export function buildCity(scene, graph, rng) {
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
       for (let i = 0; i < count; i += 1) {
-        const ox = count === 1 ? 0 : (i === 0 ? -8 : 8);
-        const oz = count === 1 ? 0 : (i === 0 ? -7 : 7);
-        const w = 12 + rng() * 10;
-        const dep = 12 + rng() * 8;
+        const ox = count === 1 ? 0 : (i === 0 ? -6 : 6);
+        const oz = count === 1 ? 0 : (i === 0 ? -5 : 5);
+        const w = 12 + rng() * Math.min(10, 15.2 - 2 * Math.abs(ox));
+        const dep = 12 + rng() * Math.min(8, 15.2 - 2 * Math.abs(oz));
         const h = d.hMin + rng() * (d.hMax - d.hMin);
         const x = bx + ox;
         const z = bz + oz;

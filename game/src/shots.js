@@ -331,8 +331,7 @@ function stageCrowd(g) {
   const rx = Math.cos(h);
   const rz = -Math.sin(h);
   const side = (-p.x * rx + -p.z * rz) >= 0 ? 1 : -1;
-  // Jarak lateral pemain dari as jalan: walker di-snap ke as jalan (4.6
-  // dari as = di trotoar, bukan di tepi trotoar / lajur mobil).
+  // Lateral pemain dari as jalan (4,6 = trotoar).
   let axisLat = 0;
   try {
     const a = axisPointOnHeading(g, p.x, p.z, fx, fz);
@@ -472,7 +471,7 @@ function frameChaseCamera(game) {
 function stageDrive(g, o) {
   setTime(g, o.time);
   const node = o.edge ? pickEdgeNode(g.graph) : pickRoadNode(g.graph, { x: 0, z: 0 }, o.rng);
-  // Hadap sepanjang jalan ke tengah kota, bukan diagonal keluar peta.
+  // Hadap sepanjang jalan ke tengah kota.
   const head = o.edge
     ? (Math.abs(node.x) >= Math.abs(node.z)
       ? (node.x > 0 ? -Math.PI / 2 : Math.PI / 2)

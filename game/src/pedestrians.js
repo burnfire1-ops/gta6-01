@@ -45,15 +45,21 @@ export function createPedestrians(scene, graph, rng) {
   const pendingReports = [];
 
   function randomPoi() {
-    let base = null;
-    if (graph && typeof graph.randomRoadNode === 'function') {
-      base = graph.randomRoadNode(rand, 0);
-    } else if (graph && Array.isArray(graph.nodes) && graph.nodes.length) {
-      base = graph.nodes[Math.floor(rand() * graph.nodes.length)];
+    const es = graph && graph.edges;
+    if (es && es.length && graph.nodeById) {
+      const e = es[Math.floor(rand() * es.length)];
+      const a = graph.nodeById.get(e.a), b = graph.nodeById.get(e.b);
+      if (a && b) {
+        const t = rand(), l = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+        const s = rand() < 0.5 ? 4.5 : -4.5;
+        return { x: a.x + (b.x - a.x) * t + (b.z - a.z) / l * s,
+          z: a.z + (b.z - a.z) * t - (b.x - a.x) / l * s };
+      }
     }
-    if (!base) return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
-    const a = rand() * Math.PI * 2;
-    return { x: base.x + Math.cos(a) * 5, z: base.z + Math.sin(a) * 5 };
+    const ns = graph && graph.nodes;
+    if (!ns || !ns.length) return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
+    const n = ns[Math.floor(rand() * ns.length)];
+    return { x: n.x, z: n.z };
   }
 
   function makeWalker() {
@@ -176,6 +182,7 @@ export function createPedestrians(scene, graph, rng) {
     const fleetCars = ctx && ctx.vehicles ? ctx.vehicles.cars
       : (ctx && ctx.fleet ? ctx.fleet.cars : []);
     const wanted = ctx && ctx.police ? (ctx.police.wanted || 0) : 0;
+    const cols = lastCtx && lastCtx.city ? lastCtx.city.colliders : null;
 
     for (const w of walkers) {
       if (w.reportCooldown > 0) w.reportCooldown -= d;
@@ -214,7 +221,8 @@ export function createPedestrians(scene, graph, rng) {
         w.idleTimer -= d;
         if (w.idleTimer <= 0) { w.state = 'walk'; w.target = randomPoi(); }
       } else if (w.state === 'avoid') {
-        if (w.avoidTarget && stepToward(w, w.avoidTarget, 2.5, d)) {
+        w.idleTimer -= d;
+        if ((w.avoidTarget && stepToward(w, w.avoidTarget, 2.5, d)) || w.idleTimer <= 0) {
           w.state = 'walk';
           w.avoidTarget = null;
         }
@@ -231,9 +239,23 @@ export function createPedestrians(scene, graph, rng) {
         if (dodge) {
           w.state = 'avoid';
           w.avoidTarget = dodge;
+          w.idleTimer = 4;
         } else if (stepToward(w, w.target, w.walkSpeed, d)) {
           w.state = 'idle';
           w.idleTimer = 2 + rand() * 3;
+        }
+      }
+
+      // Push-out collider gedung; target di dalam collider diganti baru.
+      // Nudge tangensial: tanpa ini walker yang jalurnya menembus tengah gedung diam di titik terdekat.
+      if (cols) for (const c of cols) {
+        const dx = w.pos.x - c.x, dz = w.pos.z - c.z, r = c.r + 0.4;
+        if (dx * dx + dz * dz < r * r) {
+          const dd = Math.hypot(dx, dz) || 1;
+          w.pos.x = c.x + dx / dd * r; w.pos.z = c.z + dz / dd * r;
+          if (Math.hypot(w.target.x - c.x, w.target.z - c.z) < c.r) w.target = randomPoi();
+          const k = (dx * (w.target.z - w.pos.z) - dz * (w.target.x - w.pos.x) >= 0 ? 1 : -1) * 1.5 * d / dd;
+          w.pos.x += -dz * k; w.pos.z += dx * k;
         }
       }
 

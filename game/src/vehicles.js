@@ -31,9 +31,8 @@ export function normalizeDriveInput(input) {
     out.handbrake = !!input.handbrake;
     return out;
   }
-  // CP18: input live (createInput) hanya mengekspos axes — baca itu dulu.
-  // forward +1 = W (maju), strafe +1 = D (kanan); steer legacy A=+1/D=-1,
-  // jadi steer = -strafe (A belok kiri, D belok kanan; diverifikasi empiris).
+  // CP18: input live hanya mengekspos axes; forward +1 = W, strafe +1 = D;
+  // steer = -strafe (A belok kiri, D belok kanan; diverifikasi empiris).
   const ax = input.axes;
   if (ax && typeof ax === 'object') {
     const f = typeof ax.forward === 'number' ? ax.forward : 0;
@@ -127,7 +126,6 @@ export function buildCarMesh(type) {
     g.add(h, t);
   }
 
-  // Hubcap perak terang: muka roda (grup 1/2 silinder) kebaca di aspal gelap.
   const hubMat = new THREE.MeshStandardMaterial({ color: 0xe8ebee, emissive: 0x555555, emissiveIntensity: 0.6 });
   const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 14);
   const wheels = [];
@@ -139,7 +137,6 @@ export function buildCarMesh(type) {
     g.add(w);
     wheels.push(w);
   }
-  // Blob shadow: mobil nempel di jalan.
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 4.8), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.35, depthWrite: false }));
   blob.rotation.x = -Math.PI / 2;
   blob.position.y = 0.08;

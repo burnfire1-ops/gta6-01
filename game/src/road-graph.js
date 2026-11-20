@@ -53,13 +53,11 @@ export function createRoadGraph() {
       if (iz + 1 < n) addEdge(nodeId(ix, iz), nodeId(ix, iz + 1));
     }
   }
-  // Kantor polisi Boulevard: node art-deco satu blok dari pusat kota.
-  // policeStationNode() di police-pursuit.js memakai tanda ini.
-  // Tanpa tanda, busted() jatuh ke nodes[0] (sudut peta) dan toast-nya bohong.
+  // Kantor polisi Boulevard (policeStationNode() memakainya; tanpa tanda, busted() jatuh ke nodes[0]).
   const stIx = coords.indexOf(-20);
   const stNode = stIx >= 0 ? nodeById.get(nodeId(stIx, stIx)) : null;
   if (stNode) stNode.policeStation = true;
-  // Safehouse Boulevard Art-Deco: node (-100,-100), pola sama seperti kantor polisi.
+  // Safehouse: node (-100,-100), pola sama seperti kantor polisi.
   const shIx = coords.indexOf(-100);
   const shNode = shIx >= 0 ? nodeById.get(nodeId(shIx, shIx)) : null;
   if (shNode) shNode.safehouse = true;
