@@ -9,9 +9,7 @@ const FALLBACK_TYPES = {
   police: { maxSpeed: 35, accel: 20, color: 0x14181d },
 };
 
-function typeSpec(type) {
-  return FALLBACK_TYPES[type] || FALLBACK_TYPES.sedan;
-}
+function typeSpec(type) { return FALLBACK_TYPES[type] || FALLBACK_TYPES.sedan; }
 
 export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
@@ -31,8 +29,7 @@ export function normalizeDriveInput(input) {
     out.handbrake = !!input.handbrake;
     return out;
   }
-  // CP18: input live hanya mengekspos axes; forward +1 = W, strafe +1 = D;
-  // steer = -strafe (A belok kiri, D belok kanan; diverifikasi empiris).
+  // CP18: axes live; forward +1 = W, strafe +1 = D; steer = -strafe.
   const ax = input.axes;
   if (ax && typeof ax === 'object') {
     const f = typeof ax.forward === 'number' ? ax.forward : 0;
@@ -203,30 +200,6 @@ export function driveVehicle(car, input, dt, ctx) {
   }
   syncMesh(car);
   return car;
-}
-
-export function stealCar(car, player, ctx) {
-  if (!car || !player) return false;
-  const p = car.pos;
-  if (car.driver === 'npc') {
-    car.ejectedPedestrian = { x: p.x + 2, z: p.z + 2, panic: true, t: 0 };
-    car.driver = null;
-  }
-  const wasLocked = !!car.locked;
-  car.locked = false;
-  car.driver = 'player';
-  player.currentCar = car;
-  player.onFoot = false;
-  if (player.pos) { player.pos.x = p.x; player.pos.z = p.z; }
-  if (wasLocked && ctx && ctx.police) {
-    const seenByWalker = ctx.pedestrians && Array.isArray(ctx.pedestrians.walkers)
-      && ctx.pedestrians.walkers.some((w) => (w.pos.x - p.x) ** 2 + (w.pos.z - p.z) ** 2 < 625);
-    const seenByPolice = Array.isArray(ctx.police.units)
-      && ctx.police.units.some((u) => u.car && (u.car.pos.x - p.x) ** 2 + (u.car.pos.z - p.z) ** 2 < 1600);
-    if (seenByWalker || seenByPolice) ctx.police.addWanted(1);
-    else if (ctx.toast) ctx.toast('Mobil terkunci berhasil dicuri tanpa saksi.');
-  }
-  return true;
 }
 
 export function createVehicleFleet(scene, graph, rng) {

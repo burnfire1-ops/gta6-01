@@ -9,11 +9,7 @@ const LABELS = [
   ['Bukit Residensial', 110, 110],
 ];
 
-function pt(p) {
-  if (!p || typeof p !== 'object') return null;
-  return { x: p.x ?? 0, z: p.z ?? p.y ?? 0 };
-}
-
+function pt(p) { if (!p || typeof p !== 'object') return null; return { x: p.x ?? 0, z: p.z ?? p.y ?? 0 }; }
 export function createBigMap(canvas) {
   const c = canvas ? canvas.getContext('2d') : null;
   const X = (x) => OX + (x + 300) * S;

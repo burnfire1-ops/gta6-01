@@ -238,12 +238,5 @@ export function createAudio() {
     }
   }
 
-  function setMuted(m) {
-    muted = !!m;
-    if (ctx && master) {
-      master.gain.setTargetAtTime(muted ? 0 : masterGainValue, ctx.currentTime, 0.05);
-    }
-  }
-
-  return { ensure, setEngine, siren, blip, setMood, setMuted };
+  return { ensure, setEngine, siren, blip, setMood };
 }

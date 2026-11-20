@@ -3,10 +3,7 @@ import { buildWalkerMesh } from './pedestrians.js';
 
 const REWARDS = [200, 150, 250, 300, 400, 450, 500, 1000];
 
-function isNight(timeHours) {
-  if (typeof timeHours !== 'number') return false;
-  return timeHours >= 18 || timeHours < 6;
-}
+function isNight(t) { return typeof t === 'number' && (t >= 18 || t < 6); }
 
 function readInteract(input) {
   if (!input || typeof input !== 'object') return false;
@@ -32,7 +29,7 @@ export function createMissions(ctx) {
     return best;
   }
 
-  function pickNode(keywords, fallbackIdx) {
+  function pickNode(keywords) {
     if (keywords.includes('boulevard')) {
       const st = nodes.find((n) => n.policeStation);
       if (st) return { x: st.x, z: st.z };
@@ -44,7 +41,7 @@ export function createMissions(ctx) {
       if (keywords.some((k) => d.includes(k))) return { x: n.x, z: n.z };
     }
     if (nodes.length) {
-      const n = nodes[Math.min(fallbackIdx, nodes.length - 1)];
+      const n = nodes[0];
       return { x: n.x, z: n.z };
     }
     return { x: 0, z: 0 };
@@ -60,10 +57,10 @@ export function createMissions(ctx) {
     return best ? { x: best.x, z: best.z } : { x: 100, z: 100 };
   }
 
-  const port = pickNode(['pelabuhan', 'port', 'harbour', 'industri', 'industrial'], 2);
-  const boulevard = pickNode(['boulevard'], 0);
-  const neon = pickNode(['neon'], 1);
-  const hill = pickNode(['bukit', 'residential', 'hill'], 3);
+  const port = pickNode(['port']);
+  const boulevard = pickNode(['boulevard']);
+  const neon = pickNode(['neon']);
+  const hill = pickNode(['residential']);
 
   // [judul, deskripsi, indeks reward, distrik, target]
   const DEFS = [

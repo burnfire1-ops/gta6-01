@@ -18,9 +18,7 @@ export function createChaseCamera(camera) {
   const desired = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
 
-  function dims(driving) {
-    return driving ? [DRIVE_DIST, DRIVE_HEIGHT] : [FOOT_DIST, FOOT_HEIGHT];
-  }
+  function dims(driving) { return driving ? [DRIVE_DIST, DRIVE_HEIGHT] : [FOOT_DIST, FOOT_HEIGHT]; }
 
   function update(dt, target, mode, mouseDX, mouseDY) {
     yaw -= (mouseDX || 0) * 0.0028;

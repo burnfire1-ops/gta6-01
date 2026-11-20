@@ -8,12 +8,13 @@ const POLICE_MAX = SPORT_MAX * 0.92; // sedikit di bawah sport: kabur selalu mun
 const UNITS_PER_LEVEL = [0, 1, 2, 3, 4, 5];
 
 export function nodePos(graph, id) {
-  if (graph && graph.nodeById && graph.nodeById.get(id)) return graph.nodeById.get(id);
-  if (graph && Array.isArray(graph.nodes)) return graph.nodes.find((n) => n.id === id) || null;
+  const n = graph && graph.nodeById ? graph.nodeById.get(id) : null;
+  if (n) return n;
+  if (graph && Array.isArray(graph.nodes)) return graph.nodes.find((x) => x.id === id) || null;
   return null;
 }
 
-/** Garis pandang: 3 sample point di segmen a->b terhadap collider gedung. */
+// Garis pandang: 3 titik sampel a->b vs collider gedung.
 export function hasLineOfSight(a, b, colliders) {
   if (!colliders || !colliders.length) return true;
   for (const s of [0.25, 0.5, 0.75]) {
@@ -26,9 +27,8 @@ export function hasLineOfSight(a, b, colliders) {
   return true;
 }
 
-/** Pilih node jauh dari target: tier pertama yang punya kandidat menang.
- *  tiers = [jarakMin, dotMax] (dotMax null = tanpa syarat arah pandang).
- *  top3 = pilih acak dari 3 terjauh, bukan dari semua kandidat. */
+// Pilih node jauh dari target: tier pertama yang punya kandidat menang
+// (tiers = [jarakMin, dotMax], dotMax null = tanpa syarat arah; top3 = acak dari 3 terjauh).
 function farNode(nodes, tp, vd, rand, tiers, top3) {
   const dist = (n) => Math.hypot(n.x - tp.x, n.z - tp.z);
   const dot = (n) => ((n.x - tp.x) * vd.x + (n.z - tp.z) * vd.z) / (dist(n) || 1);
@@ -92,7 +92,7 @@ export function createPolice(scene, graph, fleet, rng) {
     return Math.hypot(p.x - x, p.z - z) <= ROAD_BAND;
   }
 
-  /** Batasi gerak unit ke pita 3,0 unit di sekitar centerline terdekat. */
+  // Batasi gerak unit ke pita 3,0 di sekitar centerline terdekat.
   function enforceRoadBand(unit, dt) {
     const car = unit.car;
     if (!car) return;

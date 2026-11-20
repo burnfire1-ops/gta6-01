@@ -3,13 +3,9 @@ export const SAVE_VERSION = 1;
 const PREFIX = 'teluk-cahaya.save.';
 const VALID_SLOTS = ['1', '2', '3', 'auto'];
 
-function keyFor(slot) {
-  return PREFIX + String(slot);
-}
+function keyFor(slot) { return PREFIX + String(slot); }
 
-function isValidSlot(slot) {
-  return VALID_SLOTS.includes(String(slot));
-}
+function isValidSlot(slot) { return VALID_SLOTS.includes(String(slot)); }
 
 function storage() {
   try {

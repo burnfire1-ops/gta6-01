@@ -6,7 +6,7 @@ const LANE = 2.5; // offset lajur kanan dari as jalan (CP17)
 const CAR_GAP = 4.4; // jarak pusat minimum antar mobil (CP17)
 let sepFrame = 0;
 
-// Dorong-pisah antar mobil yang bergerak (CP17): parkir (driver null) dikecualikan.
+// Dorong-pisah mobil bergerak (CP17); parkir (driver null) dikecualikan.
 function separateCars(cars) {
   sepFrame++;
   for (let i = 0; i < cars.length; i++) {
@@ -40,7 +40,7 @@ function separateCars(cars) {
         a.speed = as * 0.3 + bs * 0.7;
         b.speed = bs * 0.3 + as * 0.7;
       }
-      // Crash stop: hapus laju yang mendekat, kalau tidak mobil selip ke samping.
+      // Crash stop: hapus laju mendekat, cegah selip ke samping.
       const fa = Math.sin(a.heading) * nx + Math.cos(a.heading) * nz;
       const fb = Math.sin(b.heading) * nx + Math.cos(b.heading) * nz;
       if (fa * a.speed > 0 && Math.abs(fa) > 0.5) a.speed = 0;
@@ -53,9 +53,6 @@ function randomNode(graph, rand) {
   if (graph && typeof graph.randomRoadNode === 'function') {
     const n = graph.randomRoadNode(rand, 0);
     if (n) return n;
-  }
-  if (graph && Array.isArray(graph.nodes) && graph.nodes.length) {
-    return graph.nodes[Math.floor(rand() * graph.nodes.length)];
   }
   return null;
 }
@@ -87,8 +84,7 @@ export function createTraffic(scene, graph, fleet, rng) {
     if (!fromId || !dest) { car._t.route = []; return; }
     car._t.route = planRoute(graph, fromId, dest.id);
     car._t.wp = 0;
-    // Jangan lompat ke route[1] kalau masih jauh dari route[0] (repath):
-    // beeline diagonal itu yang bikin mobil malang potong blok.
+    // Jangan lompat ke route[1] bila jauh dari route[0] (repath); beeline diagonal memotong blok.
     const n0 = nodePos(graph, fromId);
     if (n0 && Math.hypot(n0.x - car.pos.x, n0.z - car.pos.z) < 3) car._t.wp = 1;
   }
@@ -203,7 +199,7 @@ export function createTraffic(scene, graph, fleet, rng) {
 
       car.speed += clamp(wantSpeed - car.speed, -14 * d, 8 * d);
       if (car.speed < 0.05) car.speed = 0;
-      // Lajur kanan (CP17): bidik waypoint digeser 2,5 ke kanan arah ruas.
+      // Lajur kanan (CP17): waypoint digeser 2,5 ke kanan ruas.
       const pv = t.wp > 0 ? nodePos(graph, t.route[t.wp - 1]) : null;
       let ux = dx, uz = dz;
       if (pv && (wpNode.x !== pv.x || wpNode.z !== pv.z)) {

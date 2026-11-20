@@ -23,12 +23,7 @@ function skyColorAt(hour) {
   return new THREE.Color(c0).lerp(new THREE.Color(c1), t);
 }
 
-function nightFactorAt(hour) {
-  if (hour >= 19.5 || hour < 5) return 1;
-  if (hour >= 8 && hour <= 16.5) return 0;
-  if (hour > 16.5 && hour < 19.5) return (hour - 16.5) / 3;
-  return (8 - hour) / 3;
-}
+function nightFactorAt(hour) { if (hour >= 19.5 || hour < 5) return 1; if (hour >= 8 && hour <= 16.5) return 0; if (hour > 16.5 && hour < 19.5) return (hour - 16.5) / 3; return (8 - hour) / 3; }
 
 export function createDayNight(scene) {
   scene.background = new THREE.Color(0xaee3f5);

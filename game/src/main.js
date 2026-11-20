@@ -236,16 +236,17 @@ function handleInteract() {
 
 let inSafe = false;
 let lastAutoAt = -1e4;
+function savePayload() {
+  return { money: game.state.money, health: player.health, timeHours: dayNight.timeHours,
+    mission: missions.active, packages: packages.collectedIds(), pos: player.pos };
+}
 function checkSafehouse() {
   const inside = Math.hypot(player.pos.x - SAFEHOUSE.x, player.pos.z - SAFEHOUSE.z) <= 10;
   if (!inside) { inSafe = false; return; }
   if (inSafe) return;
   inSafe = true;
   const now = performance.now();
-  if (now - lastAutoAt >= 1e4) { lastAutoAt = now;
-  saveSystem.save('auto', { money: game.state.money, health: player.health,
-    timeHours: dayNight.timeHours, mission: missions.active,
-    packages: packages.collectedIds(), pos: player.pos }); }
+  if (now - lastAutoAt >= 1e4) { lastAutoAt = now; saveSystem.save('auto', savePayload()); }
   if (police.wanted > 0 && police.wanted < 3 && !police.units.some((u) => u.canSee)) {
     police.clearWanted(); game.state.wanted = 0; hud.toast('Wanted bersih — safehouse');
   } else if (police.wanted >= 3) hud.toast('Safehouse tidak bisa membersihkan wanted 3+');
@@ -374,14 +375,7 @@ function runGame() {
   bind('btn-continue', () => startGame(false));
   bind('btn-resume', () => showScreen('play'));
   bind('btn-save', () => {
-    saveSystem.save(1, {
-      money: game.state.money,
-      health: player.health,
-      timeHours: dayNight.timeHours,
-      mission: missions.active,
-      packages: packages.collectedIds(),
-      pos: player.pos,
-    });
+    saveSystem.save(1, savePayload());
     hud.toast('Disimpan ke slot 1');
   });
   bind('btn-quit', () => showScreen('title'));

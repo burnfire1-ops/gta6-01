@@ -56,10 +56,52 @@ export function createPedestrians(scene, graph, rng) {
           z: a.z + (b.z - a.z) * t - (b.x - a.x) / l * s };
       }
     }
-    const ns = graph && graph.nodes;
-    if (!ns || !ns.length) return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
-    const n = ns[Math.floor(rand() * ns.length)];
-    return { x: n.x, z: n.z };
+    return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
+  }
+
+  // Rute trotoar (CP23): waypoint = sudut 4,5 sebelum tiap node (titik di node
+  // = aspal jalan silang); sisi sudut = yang paling dekat waypoint sebelumnya,
+  // jadi ruas demi ruas tetap di satu sisi trotoar. Deterministik; rng() utuh.
+  function planRoute(w, target) {
+    const pts = [target];
+    if (!graph || !graph.nearestNode || !graph.findPathAStar || !graph.nodeById) return pts;
+    const start = graph.nearestNode(w.pos.x, w.pos.z);
+    const goal = graph.nearestNode(target.x, target.z);
+    if (!start || !goal || start.id === goal.id) return pts;
+    const ids = graph.findPathAStar(start.id, goal.id);
+    if (!ids || ids.length < 2) return pts;
+    const nb = (id) => graph.nodeById.get(id);
+    const U = (a, b) => { const l = Math.hypot(b.x - a.x, b.z - a.z) || 1; return [(b.x - a.x) / l, (b.z - a.z) / l]; };
+    const d2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
+    let prev = { x: w.pos.x, z: w.pos.z };
+    const corner = (n, din) => {
+      const cA = { x: n.x - din[0] * 4.5 + din[1] * 4.5, z: n.z - din[1] * 4.5 - din[0] * 4.5 };
+      const cB = { x: n.x - din[0] * 4.5 - din[1] * 4.5, z: n.z - din[1] * 4.5 + din[0] * 4.5 };
+      const pick = d2(cA, prev) <= d2(cB, prev) ? cA : cB;
+      prev = pick;
+      return pick;
+    };
+    const wps = [];
+    // Sudut awal: arah datang = sepanjang ruas tempat walker berdiri (sumbu
+    // jalan); walker -> node langsung itu diagonal karena walker di trotoar.
+    let din0 = U(prev, start);
+    const p0 = graph.nearestPointOnGraph && graph.nearestPointOnGraph(w.pos.x, w.pos.z);
+    const e0 = p0 && p0.edge, ea = e0 && nb(e0.a), eb = e0 && nb(e0.b);
+    if (ea && eb) din0 = ea.id === start.id ? U(eb, ea) : eb.id === start.id ? U(ea, eb) : din0;
+    wps.push(corner(start, din0));
+    for (let i = 1; i < ids.length - 1; i += 1) {
+      wps.push(corner(nb(ids[i]), U(nb(ids[i - 1]), nb(ids[i]))));
+    }
+    // Sudut akhir di node tujuan (sebelum belok ke ruas target).
+    wps.push(corner(goal, U(nb(ids[ids.length - 2]), goal)));
+    wps.push(target);
+    return wps;
+  }
+
+  function setTarget(w, target) {
+    w.target = target;
+    w.route = planRoute(w, target);
+    w.routeIdx = 0;
   }
 
   function makeWalker() {
@@ -83,6 +125,8 @@ export function createPedestrians(scene, graph, rng) {
     };
     mesh.position.set(w.pos.x, 0, w.pos.z);
     mesh.rotation.y = w.heading;
+    w.route = planRoute(w, w.target);
+    w.routeIdx = 0;
     if (scene && typeof scene.add === 'function') scene.add(mesh);
     return w;
   }
@@ -215,11 +259,11 @@ export function createPedestrians(scene, graph, rng) {
           z: w.pos.z + Math.cos(away) * 10,
         };
         stepToward(w, fleeTarget, 4, d);
-        if (w.panicTimer <= 0) { w.state = 'walk'; w.target = randomPoi(); w.threatPos = null; }
+        if (w.panicTimer <= 0) { w.state = 'walk'; setTarget(w, randomPoi()); w.threatPos = null; }
       } else if (w.state === 'idle') {
         w.speed = 0;
         w.idleTimer -= d;
-        if (w.idleTimer <= 0) { w.state = 'walk'; w.target = randomPoi(); }
+        if (w.idleTimer <= 0) { w.state = 'walk'; setTarget(w, randomPoi()); }
       } else if (w.state === 'avoid') {
         w.idleTimer -= d;
         if ((w.avoidTarget && stepToward(w, w.avoidTarget, 2.5, d)) || w.idleTimer <= 0) {
@@ -240,20 +284,22 @@ export function createPedestrians(scene, graph, rng) {
           w.state = 'avoid';
           w.avoidTarget = dodge;
           w.idleTimer = 4;
-        } else if (stepToward(w, w.target, w.walkSpeed, d)) {
-          w.state = 'idle';
-          w.idleTimer = 2 + rand() * 3;
+        } else {
+          const wp = (w.route && w.route[w.routeIdx]) || w.target;
+          if (stepToward(w, wp, w.walkSpeed, d)) {
+            if (w.route && w.routeIdx < w.route.length - 1) w.routeIdx += 1;
+            else { w.state = 'idle'; w.idleTimer = 2 + rand() * 3; }
+          }
         }
       }
 
-      // Push-out collider gedung; target di dalam collider diganti baru.
-      // Nudge tangensial: tanpa ini walker yang jalurnya menembus tengah gedung diam di titik terdekat.
+      // Push-out collider gedung (target di dalam collider diganti baru) + nudge tangensial.
       if (cols) for (const c of cols) {
         const dx = w.pos.x - c.x, dz = w.pos.z - c.z, r = c.r + 0.4;
         if (dx * dx + dz * dz < r * r) {
           const dd = Math.hypot(dx, dz) || 1;
           w.pos.x = c.x + dx / dd * r; w.pos.z = c.z + dz / dd * r;
-          if (Math.hypot(w.target.x - c.x, w.target.z - c.z) < c.r) w.target = randomPoi();
+          if (Math.hypot(w.target.x - c.x, w.target.z - c.z) < c.r) setTarget(w, randomPoi());
           const k = (dx * (w.target.z - w.pos.z) - dz * (w.target.x - w.pos.x) >= 0 ? 1 : -1) * 1.5 * d / dd;
           w.pos.x += -dz * k; w.pos.z += dx * k;
         }

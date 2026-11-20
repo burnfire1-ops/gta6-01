@@ -150,8 +150,8 @@ export function buildCity(scene, graph, rng) {
       for (let i = 0; i < count; i += 1) {
         const ox = count === 1 ? 0 : (i === 0 ? -6 : 6);
         const oz = count === 1 ? 0 : (i === 0 ? -5 : 5);
-        const w = 12 + rng() * Math.min(10, 15.2 - 2 * Math.abs(ox));
-        const dep = 12 + rng() * Math.min(8, 15.2 - 2 * Math.abs(oz));
+        const w = 12 + rng() * Math.min(10, 12 - 2 * Math.abs(ox));
+        const dep = 12 + rng() * Math.min(8, 12 - 2 * Math.abs(oz));
         const h = d.hMin + rng() * (d.hMax - d.hMin);
         const x = bx + ox;
         const z = bz + oz;
@@ -178,16 +178,16 @@ export function buildCity(scene, graph, rng) {
   towerMat.userData.glow = true;
   const tower = new THREE.Mesh(boxGeo, towerMat);
   tower.scale.set(22, 72, 22);
-  tower.position.set(20, 36, -20);
+  tower.position.set(0, 36, 0);
   tower.castShadow = true;
   group.add(tower);
   const towerTopMat = new THREE.MeshStandardMaterial({ color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0.4 });
   towerTopMat.userData.glow = true;
   const towerTop = new THREE.Mesh(boxGeo, towerTopMat);
   towerTop.scale.set(24, 2, 24);
-  towerTop.position.set(20, 73, -20);
+  towerTop.position.set(0, 73, 0);
   group.add(towerTop);
-  colliders.push({ x: 20, z: -20, r: 16 });
+  colliders.push({ x: 0, z: 0, r: 16 });
 
   const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x8a7f72, roughness: 0.9 });
   const bridge = new THREE.Mesh(boxGeo, bridgeMat);
@@ -311,7 +311,7 @@ export function buildCity(scene, graph, rng) {
     g.textAlign = 'center';
     g.fillText('TC', w / 2, h / 2 + 12);
   });
-  for (const [sx, sz] of [[-180, -180], [180, -180], [-180, 180], [180, 180], [0, 0]]) {
+  for (const [sx, sz] of [[-180, -180], [180, -180], [-180, 180], [180, 180], [20, 20]]) {
     const pole = new THREE.Mesh(poleGeo, poleMat);
     pole.scale.set(1, 0.6, 1);
     pole.position.set(sx + 4.6, 1.6, sz + 4.6);

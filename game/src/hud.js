@@ -5,56 +5,30 @@ const MAX_WANTED = 5;
 
 const MINIMAP_RANGE = 140;
 
-function pick(...vals) {
-  for (const v of vals) if (v !== undefined && v !== null) return v;
-  return undefined;
+function pick(...vals) { for (const v of vals) if (v != null) return v; return undefined; }
+
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+function formatRupiah(n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); }
+
+function formatJam(t) {
+  const v = Number(t) || 0;
+  const p = (n) => String(n).padStart(2, '0');
+  return p(Math.floor(v) % 24) + ':' + p(Math.floor((v % 1) * 60));
 }
 
-function clamp(v, lo, hi) {
-  return v < lo ? lo : v > hi ? hi : v;
-}
+function normPoint(p) { if (!p || typeof p !== 'object') return null; return { x: typeof p.x === 'number' ? p.x : 0, z: typeof p.z === 'number' ? p.z : typeof p.y === 'number' ? p.y : 0 }; }
 
-function formatRupiah(n) {
-  const v = Math.round(Number(n) || 0);
-  return 'Rp ' + v.toLocaleString('id-ID');
-}
-
-function formatJam(timeHours) {
-  const h = Math.floor(Number(timeHours) || 0) % 24;
-  const m = Math.floor(((Number(timeHours) || 0) % 1) * 60);
-  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-}
-
-function normPoint(p) {
-  if (!p || typeof p !== 'object') return null;
-  const x = typeof p.x === 'number' ? p.x : 0;
-  const z = typeof p.z === 'number' ? p.z : typeof p.y === 'number' ? p.y : 0;
-  return { x, z };
-}
-
-function resolveEndpoint(end, nodes) {
-  if (typeof end === 'number') return normPoint(nodes ? nodes[end] : null);
-  return normPoint(end);
-}
+function resolveEndpoint(end, nodes) { return normPoint(typeof end === 'number' ? (nodes ? nodes[end] : null) : end); }
 
 function edgePoints(edge, nodes) {
   if (!edge) return null;
-  if (Array.isArray(edge)) {
-    const a = resolveEndpoint(edge[0], nodes);
-    const b = resolveEndpoint(edge[1], nodes);
-    return a && b ? { a, b } : null;
-  }
-  const a = resolveEndpoint(edge.a ?? edge.from ?? edge.n1 ?? edge.u ?? edge.start, nodes);
-  const b = resolveEndpoint(edge.b ?? edge.to ?? edge.n2 ?? edge.v ?? edge.end, nodes);
+  const a = resolveEndpoint(Array.isArray(edge) ? edge[0] : edge.a, nodes);
+  const b = resolveEndpoint(Array.isArray(edge) ? edge[1] : edge.b, nodes);
   return a && b ? { a, b } : null;
 }
 
-function headingToAngle(heading) {
-  if (typeof heading === 'number') return heading;
-  const p = normPoint(heading);
-  if (!p) return 0;
-  return Math.atan2(p.x, -p.z);
-}
+function headingToAngle(h) { if (typeof h === 'number') return h; const p = normPoint(h); return p ? Math.atan2(p.x, -p.z) : 0; }
 
 export function createHud() {
   const $ = (id) => document.getElementById(id);
@@ -208,28 +182,24 @@ export function createHud() {
       mm.fill();
     }
 
-    if (Array.isArray(data.packages)) {
-      mm.fillStyle = '#f2c94c';
-      for (const pk of data.packages) {
-        const p = normPoint(pk);
+    const dots = (list, r) => {
+      for (const it of list) {
+        const p = normPoint(it);
         if (p && inView(p.x, p.z)) {
           mm.beginPath();
-          mm.arc(toX(p.x), toY(p.z), 3, 0, Math.PI * 2);
+          mm.arc(toX(p.x), toY(p.z), r, 0, Math.PI * 2);
           mm.fill();
         }
       }
+    };
+    if (Array.isArray(data.packages)) {
+      mm.fillStyle = '#f2c94c';
+      dots(data.packages, 3);
     }
 
     if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
       mm.fillStyle = '#4f8ef7';
-      for (const u of data.policeUnits) {
-        const p = normPoint(u);
-        if (p && inView(p.x, p.z)) {
-          mm.beginPath();
-          mm.arc(toX(p.x), toY(p.z), 3.5, 0, Math.PI * 2);
-          mm.fill();
-        }
-      }
+      dots(data.policeUnits, 3.5);
     }
 
     mm.save();

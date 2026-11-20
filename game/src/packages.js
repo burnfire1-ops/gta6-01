@@ -11,7 +11,7 @@ export function createPackages(scene, graph, rng) {
   const rand = typeof rng === 'function' ? rng : Math.random;
   const items = [];
   const used = new Set();
-  // Offset diagonal 4,6 (pola lampu kota): paket di sudut trotoar; node tepi (±220) dikecualikan (offset jatuh di luar batas jalan).
+  // Offset diagonal 4,6: paket di sudut trotoar; node tepi (±220) dikecualikan.
   const EDGE = CITY.half - 20;
   for (const d of DISTRICTS) {
     const pool = nodes.filter((n) => n.district === d

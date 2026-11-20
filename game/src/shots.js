@@ -382,7 +382,7 @@ function startFirstMission(game, want) {
   if (!missions || !isFn(missions.startMission)) return;
   const first = Array.isArray(missions.list) && missions.list.length > 0 ? missions.list[0] : null;
   const fi = first && first.index !== undefined ? first.index : 1;
-  const ids = want !== undefined ? [want] : [fi, 1, 0, 'misi-1', 'mission-1'];
+  const ids = want !== undefined ? [want] : [fi, 1, 0];
   for (const id of ids) {
     try {
       missions.startMission(id);
