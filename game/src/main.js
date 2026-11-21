@@ -26,10 +26,8 @@ import { createBigMap } from './bigmap.js';
 import { createHud } from './hud.js';
 import { createAudio } from './audio.js';
 import { createSaveSystem } from './save.js';
-import { stageShot } from './shots.js';
 
 const params = new URLSearchParams(window.location.search);
-const shot = params.get('shot');
 const seedParam = Number.parseInt(params.get('seed') ?? '', 10);
 const seed = Number.isInteger(seedParam) ? seedParam : Math.floor(Math.random() * 4294967296);
 const rng = createRandom(seed || SEED);
@@ -108,10 +106,12 @@ const game = {
   camera,
   renderer,
   seed,
+  // CP24 M0 staging: ?shot= dihapus; script staging luar membekukan loop
+  // (setAnimationLoop(null)) lalu melanjutkannya lagi via hook ini.
+  startLoop() { renderer.setAnimationLoop(frame); },
   state: { wanted: 0, money: MISSIONS.startMoney, health: player.health },
 };
 window.__game = game;
-window.__shotReady = false;
 window.__renderer = renderer;
 
 function announce(message) {
@@ -346,26 +346,6 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 
-function runShot(name) {
-  let staged = null;
-  try {
-    staged = stageShot(name, game);
-  } catch (err) {
-    console.error('stageShot failed:', err);
-  }
-  if (staged && staged.screen === 'gameover') showScreen('gameover');
-  else showScreen(staged && staged.screen === 'title' ? 'title' : 'play');
-  let painted = 0;
-  function paint() {
-    dayNight.update(0);
-    renderer.render(scene, camera);
-    painted += 1;
-    if (painted < 2) requestAnimationFrame(paint);
-    else window.__shotReady = true;
-  }
-  requestAnimationFrame(paint);
-}
-
 function runGame() {
   const bind = (id, fn) => {
     const el = $(id);
@@ -399,5 +379,4 @@ function runGame() {
   renderer.setAnimationLoop(frame);
 }
 
-if (shot) runShot(shot);
-else runGame();
+runGame();
