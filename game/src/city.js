@@ -107,6 +107,29 @@ function buildMall(group, colliders, boxGeo, neonMat) {
 }
 
 const PARK_TREES = [[108,108],[132,108],[108,132],[112,110],[128,110],[110,128],[124,130],[114,133]];
+const FAIR_PALMS = [[-224,104],[-224,118],[-224,132],[-224,142]];
+// CP24 M4: taman ria.
+function buildFair(g,c,b){
+ const A=(mt,x,y,z,sx,sy,sz,rz)=>{const m=new THREE.Mesh(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);if(rz)m.rotation.z=rz;g.add(m);return m;};
+ A(MM({color:0xe8c98a}),-200,0.06,120,30,0.1,30).receiveShadow=true;
+ const lm=MM({color:0x8a6a4a,roughness:0.8});
+ A(lm,-203.5,5.5,120,1,12.5,1,0.5);A(lm,-196.5,5.5,120,1,12.5,1,-0.5);
+ const wh=new THREE.Group();wh.position.set(-200,11,120);wh.userData.spin='z';g.add(wh);
+ const rm=MM({color:0xff1f8a,roughness:0.5,emissive:0xff1f8a});rm.userData.glow=true;
+ wh.add(new THREE.Mesh(new THREE.TorusGeometry(9,0.35,6,28),rm));
+ const sm=MM({color:0xffd166,roughness:0.6});
+ for(let i=0;i<4;i++){const s=new THREE.Mesh(b,sm);s.scale.set(0.35,17.6,0.35);s.rotation.z=i*Math.PI/4;wh.add(s);}
+ const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,1.4,10),sm);hb.rotation.x=Math.PI/2;wh.add(hb);
+ const gc=[0xff5a5a,0xffd166,0x17ddd6,0x2ec96a,0xff8a3d,0x9b5de5,0xffffff,0xff1f8a];
+ for(let i=0;i<8;i++){const a=i*Math.PI/4;const k=new THREE.Mesh(b,MM({color:gc[i],roughness:0.6}));k.scale.set(1.8,1.8,1.8);k.position.set(Math.cos(a)*9,Math.sin(a)*9,0);wh.add(k);}
+ const cb=new THREE.Mesh(new THREE.CylinderGeometry(4,4.4,0.8,12),MM({color:0xfff2c0,roughness:0.7}));cb.position.set(-188,0.4,108);g.add(cb);
+ const ct=new THREE.Group();ct.position.set(-188,0.8,108);ct.userData.spin='y';g.add(ct);
+ const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,4.4,8),sm);cp.position.y=2.2;ct.add(cp);
+ const rf=new THREE.Mesh(new THREE.ConeGeometry(4.6,2.4,8),MM({color:0xff1f8a,roughness:0.6}));rf.position.y=5.2;ct.add(rf);
+ for(let i=0;i<4;i++){const a=i*Math.PI/2;const h=new THREE.Mesh(b,MM({color:gc[i],roughness:0.6}));h.scale.set(0.8,1.6,0.8);h.position.set(Math.cos(a)*2.6,1.6,Math.sin(a)*2.6);ct.add(h);}
+ for(const [x,z] of [[-224,110],[-224,126],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=new THREE.Mesh(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
+ c.push({x:-200,z:120,r:8},{x:-188,z:108,r:5});
+}
 // CP24 M3: taman.
 function buildPark(g, c, b) {
   const A = (mt, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(b, mt); m.scale.set(sx, sy, sz); m.position.set(x, y, z); g.add(m); return m; };
@@ -211,7 +234,7 @@ export function buildCity(scene, graph, rng) {
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
       const kind = FACILITIES[`${bx},${bz}`];
-      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); continue; }
+      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); if (kind === 'fair') buildFair(group, colliders, boxGeo); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
@@ -330,6 +353,7 @@ export function buildCity(scene, graph, rng) {
     }
   }
   for (const [x, z] of PARK_TREES) palmSpots.push({ x, z });
+  for (const [x, z] of FAIR_PALMS) palmSpots.push({ x, z });
   const trunkGeo = new THREE.CylinderGeometry(0.22, 0.35, 4.5, 6);
   const crownGeo = new THREE.IcosahedronGeometry(2.1, 0);
   crownGeo.scale(1, 0.45, 1);

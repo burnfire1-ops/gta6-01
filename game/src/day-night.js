@@ -46,11 +46,13 @@ export function createDayNight(scene) {
 
   const glowMats = new Set();
   const beams = [];
+  const spinners = [];
   scene.traverse((obj) => {
     if (obj.material && obj.material.userData && obj.material.userData.glow) {
       glowMats.add(obj.material);
     }
     if (obj.userData && obj.userData.spinBeam) beams.push(obj);
+    if (obj.userData && obj.userData.spin) spinners.push(obj);
   });
 
   let timeHours = 17.5; // CP24 M1: golden hour default
@@ -97,6 +99,7 @@ export function createDayNight(scene) {
       for (const beam of beams) {
         if (beam.visible) beam.rotation.y += dt * 0.9;
       }
+      for (const o of spinners) o.rotation[o.userData.spin] += dt * (o.userData.spin === 'y' ? 0.6 : 0.25);
     },
   };
 }
