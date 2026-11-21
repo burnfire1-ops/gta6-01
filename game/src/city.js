@@ -61,6 +61,15 @@ function roadTexture() {
   return tex;
 }
 
+// CP24 M1: 5 blok digusur (Opsi C). Klinik (120,160) tetap — sketsa §3.2 tulis 6/150, salah.
+const FACILITIES = { '120,-120': 'mall', '120,120': 'park', '-200,120': 'fair', '-160,80': 'industrial', '-80,-120': 'hospital' };
+
+// Bakar rng() sebanyak cabang generik (1 jumlah + 3/bangunan) — aliran sesudahnya identik.
+function burnRngForBlock(rng) {
+  const count = rng() < 0.3 ? 2 : 1;
+  for (let i = 0; i < count; i += 1) { rng(); rng(); rng(); }
+}
+
 export function buildCity(scene, graph, rng) {
   const colliders = [];
   const lamps = [];
@@ -144,6 +153,8 @@ export function buildCity(scene, graph, rng) {
   const spacing = CITY.roadSpacing;
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
+      const kind = FACILITIES[`${bx},${bz}`];
+      if (kind) { burnRngForBlock(rng); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
@@ -335,5 +346,5 @@ export function buildCity(scene, graph, rng) {
     group.add(strip);
   }
 
-  return { colliders, landmarks: { tower, lighthouse, bridge }, lamps };
+  return { colliders, landmarks: { tower, lighthouse, bridge }, lamps, facilities: FACILITIES };
 }

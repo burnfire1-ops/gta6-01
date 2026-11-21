@@ -53,7 +53,7 @@ export function createDayNight(scene) {
     if (obj.userData && obj.userData.spinBeam) beams.push(obj);
   });
 
-  let timeHours = 9;
+  let timeHours = 17.5; // CP24 M1: golden hour default
 
   function apply(hour) {
     const sky = skyColorAt(hour);
