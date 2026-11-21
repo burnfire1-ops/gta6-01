@@ -12,6 +12,7 @@ function canvasTexture(w, h, draw) {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
+const MM = (o) => new THREE.MeshStandardMaterial(o); // CP24 M2: alias hemat byte
 
 function win(g, c, r, cols, rows, w, h) {
   g.fillRect(10 + c * ((w - 20) / cols) + 3, 18 + r * ((h - 30) / rows) + 3,
@@ -68,6 +69,41 @@ const FACILITIES = { '120,-120': 'mall', '120,120': 'park', '-200,120': 'fair', 
 function burnRngForBlock(rng) {
   const count = rng() < 0.3 ? 2 : 1;
   for (let i = 0; i < count; i += 1) { rng(); rng(); rng(); }
+}
+
+// CP24 M2: Mall Cahaya Plaza (120,-120), 28x22x13, parkir + neon. Tetap, tanpa rng().
+function buildMall(group, colliders, boxGeo, neonMat) {
+  const glassMat = MM({ color: PALETTE.glassTeal, roughness: 0.15, metalness: 0.6, emissive: 0x19e6d2 });
+  glassMat.userData.glow = true; // day-night apply() yang mengatur intensitas (bukan ctor)
+  const BM = (mat) => new THREE.Mesh(boxGeo, mat);
+  const add = (m, x, y, z, sx, sy, sz) => { m.scale.set(sx, sy, sz); m.position.set(x, y, z); group.add(m); return m; };
+  const mall = add(BM(glassMat), 120, 6.5, -124, 28, 13, 22);
+  mall.castShadow = true; mall.receiveShadow = true;
+  const bandMat = MM({ color: 0x0e2a33, roughness: 0.7 });
+  for (const fy of [4.4, 8.8]) add(BM(bandMat), 120, fy, -124, 28.6, 0.4, 22.6);
+  add(BM(MM({ color: 0xff1f8a, roughness: 0.9 })), 120, 13.4, -124, 28.8, 0.8, 22.8);
+  const textTex = (w, h, bg, fg, font, txt) => canvasTexture(w, h, (g) => { g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = fg; g.font = font; g.textAlign = 'center'; g.fillText(txt, w / 2, h / 2 + 14); });
+  const signTex = textTex(512, 64, '#101a33', '#ffd166', 'bold 40px system-ui, sans-serif', 'CAHAYA PLAZA');
+  const signMat = MM({ map: signTex, emissiveMap: signTex, emissive: 0xffffff, roughness: 0.6 });
+  signMat.userData.glow = true;
+  add(new THREE.Mesh(new THREE.PlaneGeometry(20, 2.5), signMat), 120, 10.5, -112.9, 1, 1, 1);
+  add(BM(neonMat), 120, 13.9, -112.8, 28.6, 0.5, 0.5); // strip neon atap
+  add(BM(neonMat), 120, 3.4, -112.6, 8, 0.4, 1); // strip neon pintu masuk
+  const pTex = textTex(64, 64, '#101a33', '#19e6d2', 'bold 44px system-ui, sans-serif', 'P');
+  const pMat = MM({ map: pTex, emissiveMap: pTex, emissive: 0xffffff, side: THREE.DoubleSide });
+  pMat.userData.glow = true;
+  const poleMat = MM({ color: 0x2c3444, roughness: 0.7, metalness: 0.4 });
+  for (const px of [106, 134]) {
+    add(BM(poleMat), px, 1.5, -104, 0.3, 3, 0.3);
+    add(new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), pMat), px, 3.6, -104, 1, 1, 1);
+  }
+  const lotTex = canvasTexture(128, 64, (g, w, h) => { g.fillStyle = '#2c3140'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4f1e6'; for (let i = 0; i <= 6; i += 1) g.fillRect(4 + i * 20, 6, 2, h - 12); });
+  const lot = new THREE.Mesh(new THREE.PlaneGeometry(30, 12), MM({ map: lotTex, roughness: 0.95 }));
+  lot.rotation.x = -Math.PI / 2;
+  lot.position.set(120, 0.08, -109);
+  lot.receiveShadow = true;
+  group.add(lot);
+  colliders.push({ x: 120, z: -124, r: 18 });
 }
 
 export function buildCity(scene, graph, rng) {
@@ -148,13 +184,18 @@ export function buildCity(scene, graph, rng) {
   }
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const roofGeo = new THREE.BoxGeometry(1, 1, 1);
+  // CP24 M2: strip neon dipakai mall + blok tetangga + 14 strip lama.
+  const neonMat = new THREE.MeshStandardMaterial({
+    color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0,
+  });
+  neonMat.userData.glow = true;
 
   const half = CITY.half;
   const spacing = CITY.roadSpacing;
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
       const kind = FACILITIES[`${bx},${bz}`];
-      if (kind) { burnRngForBlock(rng); continue; }
+      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
@@ -177,6 +218,11 @@ export function buildCity(scene, graph, rng) {
         roof.scale.set(w + 0.8, 0.8, dep + 0.8);
         roof.position.set(x, h + 0.4, z);
         group.add(roof);
+        // CP24 M2: neon di fasad selatan bangunan blok tetangga mall (80/160,-120).
+        if (bz === -120 && (bx === 80 || bx === 160)) {
+          const ns = new THREE.Mesh(boxGeo, neonMat);
+          ns.scale.set(w * 0.8, 0.5, 0.5); ns.position.set(x, h - 1.2, z + dep / 2 + 0.3); group.add(ns);
+        }
         colliders.push({ x, z, r: Math.max(w, dep) * 0.62 });
       }
     }
@@ -276,9 +322,10 @@ export function buildCity(scene, graph, rng) {
   const crowns = new THREE.InstancedMesh(crownGeo, crownMat, Math.max(1, palmSpots.length));
   const m4 = new THREE.Matrix4();
   palmSpots.forEach((p, i) => {
-    m4.makeTranslation(p.x, 2.25, p.z);
+    const hide = p.x > 105 && p.x < 135 && p.z > -115 && p.z < -103; // CP24 M2: palem di lot mall dibenam
+    m4.makeTranslation(p.x, hide ? -10 : 2.25, p.z);
     trunks.setMatrixAt(i, m4);
-    m4.makeTranslation(p.x, 4.9, p.z);
+    m4.makeTranslation(p.x, hide ? -10 : 4.9, p.z);
     crowns.setMatrixAt(i, m4);
   });
   trunks.castShadow = true;
@@ -335,10 +382,6 @@ export function buildCity(scene, graph, rng) {
     group.add(sign);
   }
 
-  const neonMat = new THREE.MeshStandardMaterial({
-    color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0,
-  });
-  neonMat.userData.glow = true;
   for (let i = 0; i < 14; i += 1) {
     const strip = new THREE.Mesh(boxGeo, neonMat);
     strip.scale.set(10 + rng() * 8, 0.5, 0.5);

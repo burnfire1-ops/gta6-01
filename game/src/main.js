@@ -87,6 +87,12 @@ const ctx = {
 const missions = createMissions(ctx);
 ctx.missions = missions;
 const packages = createPackages(scene, graph, rng);
+// CP24 M2: 4 mobil parkir mall (driver null, bisa dicuri; locked 25% kecuali sport).
+[[107, 'sport'], [112, 'sedan'], [128, 'taxi'], [133, 'van']].forEach(([px, pt]) => {
+  const pc = fleet.spawnCar(pt, { x: px, z: -106 });
+  pc.heading = 0;
+  pc.locked = pt !== 'sport' && rng() < 0.25;
+});
 const bigMap = createBigMap($('bigmap'));
 
 const game = {
