@@ -106,6 +106,22 @@ function buildMall(group, colliders, boxGeo, neonMat) {
   colliders.push({ x: 120, z: -124, r: 18 });
 }
 
+const PARK_TREES = [[108,108],[132,108],[108,132],[112,110],[128,110],[110,128],[124,130],[114,133]];
+// CP24 M3: taman.
+function buildPark(g, c, b) {
+  const A = (mt, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(b, mt); m.scale.set(sx, sy, sz); m.position.set(x, y, z); g.add(m); return m; };
+  A(MM({ color: 0x58b368 }), 120, 0.06, 120, 29, 0.1, 29).receiveShadow = true;
+  for(const [w,d] of [[29,3],[3,29]]) A(MM({ color: 0xd8cfae }), 120, 0.07, 120, w, 0.1, d);
+  const gm = MM({ color: 0xfff2c0, emissive: 0xffd27a });
+  gm.userData.glow = true;
+  A(MM({ color: 0xcfc8b8 }), 120, 1, 120, 6, 2, 6);
+  A(gm, 120, 6.5, 120, 2, 9, 2).castShadow = true;
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.6, 4), gm);
+  tip.position.set(120,12.3,120);g.add(tip);
+  for(const [x,z] of [[114,116],[126,116],[114,124],[126,124]]) A(MM({ color: 0x7a5a3a }), x, 0.55, z, 2.4, 0.5, 0.9);
+  c.push({x:120,z:120,r:6});
+}
+
 export function buildCity(scene, graph, rng) {
   const colliders = [];
   const lamps = [];
@@ -195,7 +211,7 @@ export function buildCity(scene, graph, rng) {
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
       const kind = FACILITIES[`${bx},${bz}`];
-      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); continue; }
+      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
@@ -313,6 +329,7 @@ export function buildCity(scene, graph, rng) {
       palmSpots.push({ x: px + Math.cos(along) * side, z: pz - Math.sin(along) * side });
     }
   }
+  for (const [x, z] of PARK_TREES) palmSpots.push({ x, z });
   const trunkGeo = new THREE.CylinderGeometry(0.22, 0.35, 4.5, 6);
   const crownGeo = new THREE.IcosahedronGeometry(2.1, 0);
   crownGeo.scale(1, 0.45, 1);
