@@ -58,7 +58,7 @@ export function createPedestrians(scene, graph, rng) {
       const a = graph.nodeById.get(e.a), b = graph.nodeById.get(e.b);
       if (a && b) {
         const t = rand(), l = Math.hypot(b.x - a.x, b.z - a.z) || 1;
-        const s = rand() < 0.5 ? 4.5 : -4.5;
+        const s = rand() < 0.5 ? 5.125 : -5.125;
         return { x: a.x + (b.x - a.x) * t + (b.z - a.z) / l * s,
           z: a.z + (b.z - a.z) * t - (b.x - a.x) / l * s };
       }
@@ -66,7 +66,7 @@ export function createPedestrians(scene, graph, rng) {
     return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
   }
 
-  // Rute trotoar (CP23): waypoint = sudut 4,5 sebelum tiap node (titik di node
+  // Rute trotoar (CP23): waypoint = sudut 5,125 sebelum tiap node (titik di node
   // = aspal jalan silang); sisi sudut = yang paling dekat waypoint sebelumnya,
   // jadi ruas demi ruas tetap di satu sisi trotoar. Deterministik; rng() utuh.
   function planRoute(w, target) {
@@ -82,8 +82,8 @@ export function createPedestrians(scene, graph, rng) {
     const d2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
     let prev = { x: w.pos.x, z: w.pos.z };
     const corner = (n, din) => {
-      const cA = { x: n.x - din[0] * 4.5 + din[1] * 4.5, z: n.z - din[1] * 4.5 - din[0] * 4.5 };
-      const cB = { x: n.x - din[0] * 4.5 - din[1] * 4.5, z: n.z - din[1] * 4.5 + din[0] * 4.5 };
+      const cA = { x: n.x - din[0] * 5.125 + din[1] * 5.125, z: n.z - din[1] * 5.125 - din[0] * 5.125 };
+      const cB = { x: n.x - din[0] * 5.125 - din[1] * 5.125, z: n.z - din[1] * 5.125 + din[0] * 5.125 };
       const pick = d2(cA, prev) <= d2(cB, prev) ? cA : cB;
       prev = pick;
       return pick;
