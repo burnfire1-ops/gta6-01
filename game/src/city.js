@@ -10,6 +10,7 @@ function canvasTexture(w, h, draw) {
   draw(c.getContext('2d'), w, h);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
   return tex;
 }
 const MM = (o) => new THREE.MeshStandardMaterial(o); // CP24 M2: alias hemat byte
@@ -55,7 +56,9 @@ function roadTexture(){
   g.fillStyle='#333a4a';g.fillRect(0,0,w,h);
   g.fillStyle='#ffd166';g.fillRect(w/2-6,2,4,28);g.fillRect(w/2+2,2,4,28);
   g.fillStyle='#f4f1e6';g.fillRect(2,0,2,h);g.fillRect(w-4,0,2,h);});
- t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;}
+ return t;}
+const gT=canvasTexture(64,64,(g)=>{g.fillStyle='#a8d64e';g.fillRect(0,0,64,64);g.fillStyle='#8fb83e';for(let i=32;i--;)g.fillRect(i*37%64,i*53%64,6,4);});gT.repeat.set(48,48);
+const sT=canvasTexture(64,64,(g)=>{g.fillStyle='#8f8570';g.fillRect(0,0,64,64);g.fillStyle='#e0bf7d';g.fillRect(4,0,56,64);g.fillStyle='#b39b62';for(let i=4;--i;){g.fillRect(i*16,0,2,64);g.fillRect(0,i*16,64,2);}});sT.repeat.set(3,10);
 
 // CP24 M1: 5 blok digusur (Opsi C). Klinik (120,160) tetap — sketsa §3.2 tulis 6/150, salah.
 const FACILITIES = { '120,-120': 'mall', '120,120': 'park', '-200,120': 'fair', '-160,80': 'industrial', '-80,-120': 'hospital' };
@@ -203,7 +206,7 @@ export function buildCity(scene, graph, rng) {
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(CITY.size + 40, CITY.size + 40),
-    new THREE.MeshStandardMaterial({ color: 0xa8d64e, roughness: 1 }),
+    MM({ map: gT, roughness: 1 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -226,7 +229,7 @@ export function buildCity(scene, graph, rng) {
   group.add(beach);
 
   const asphaltTex = roadTexture();
-  const sidewalkMat = new THREE.MeshStandardMaterial({ color: PALETTE.sidewalk, roughness: 1 });
+  const sidewalkMat = MM({ map: sT, roughness: 1 });
   for (const edge of graph.edges) {
     const a = graph.nodeById.get(edge.a);
     const b = graph.nodeById.get(edge.b);
@@ -430,10 +433,11 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   const m4 = new THREE.Matrix4();
   palmSpots.forEach((p, i) => {
     const hide = p.x > 105 && p.x < 135 && p.z > -115 && p.z < -103; // CP24 M2: palem di lot mall dibenam
-    m4.makeTranslation(p.x, hide ? -10 : 2.25, p.z);
-    trunks.setMatrixAt(i, m4);
-    m4.makeTranslation(p.x, hide ? -10 : 4.9, p.z);
-    crowns.setMatrixAt(i, m4);
+    const h=(i*73%100)/100,s=.85+h*.3;
+    m4.makeRotationY(h*6.28).multiplyScalar(s);
+    m4.setPosition(p.x,hide?-10:2.25*s,p.z);trunks.setMatrixAt(i,m4);
+    m4.setPosition(p.x,hide?-10:4.5*s+.4,p.z);crowns.setMatrixAt(i,m4);
+    crowns.setColorAt(i,new THREE.Color(h<.5?0xec957:0xa8a3f));
   });
   trunks.castShadow = true;
   crowns.castShadow = true;
