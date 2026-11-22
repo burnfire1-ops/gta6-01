@@ -1,6 +1,7 @@
 
 import { districtAt } from './road-graph.js';
 const DN={a:'Boulevard Art-Deco',n:'Distrik Neon',p:'Pelabuhan',r:'Bukit Residensial'};
+const G={p:'Geng Dermaga',n:'Anak Neon'};
 const STAR_FULL = '★';
 const STAR_EMPTY = '☆';
 const MAX_WANTED = 5;
@@ -349,6 +350,7 @@ export function createHud() {
       if (d && d !== last.district && el.districtCard && el.districtName) {
         last.district = d;
         el.districtName.textContent = DN[d[0]];
+        el.districtCard.children[1].textContent=G[d[0]]||'TELUK CAHAYA';
         el.districtCard.style.display='block';
         clearTimeout(cardTimer);
         cardTimer = setTimeout(() => { el.districtCard.style.display='none'; }, 2800);

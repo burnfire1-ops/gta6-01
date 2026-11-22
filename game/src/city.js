@@ -155,8 +155,9 @@ function buildInd(g,c,b){
  ch.position.set(-172,10,90);g.add(ch);
  ch=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.35,1.4,10),MM({color:0x2a2a2a}));
  ch.position.set(-172,19.8,90);g.add(ch);
+ const t=textTex(256,64,'#d94f3d','#fff',F,'DERMAGA');
  const cc=[[0xd94f3d,-153,70,1.25],[0x2e7fd9,-149,70,1.25],[0x2ec96a,-153,70,3.75],[0xffd166,-149,77,1.25],[0xff8a3d,-153,77,1.25]];
- for(const [k,x,z,y] of cc)A(MM({color:k}),x,y,z,2.5,2.5,6);
+ for(const [k,x,z,y] of cc)A(MM(k==0xd94f3d?{map:t}:{color:k}),x,y,z,2.5,2.5,6);
  c.push({x:-160,z:80,r:16});
 }
 
