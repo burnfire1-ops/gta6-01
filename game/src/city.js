@@ -50,17 +50,12 @@ function facadeTextures(base, rng, litRatio) {
   return { map, emissiveMap };
 }
 
-function roadTexture() {
-  const tex = canvasTexture(128, 32, (g, w, h) => {
-    g.fillStyle = '#333a4a';
-    g.fillRect(0, 0, w, h);
-    g.fillStyle = '#f4f1e6';
-    g.fillRect(w / 2 - 3, 4, 6, 24);
-  });
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
+function roadTexture(){
+ const t=canvasTexture(128,32,(g,w,h)=>{
+  g.fillStyle='#333a4a';g.fillRect(0,0,w,h);
+  g.fillStyle='#ffd166';g.fillRect(w/2-6,2,4,28);g.fillRect(w/2+2,2,4,28);
+  g.fillStyle='#f4f1e6';g.fillRect(2,0,2,h);g.fillRect(w-4,0,2,h);});
+ t.wrapS=THREE.RepeatWrapping;t.wrapT=THREE.RepeatWrapping;return t;}
 
 // CP24 M1: 5 blok digusur (Opsi C). Klinik (120,160) tetap — sketsa §3.2 tulis 6/150, salah.
 const FACILITIES = { '120,-120': 'mall', '120,120': 'park', '-200,120': 'fair', '-160,80': 'industrial', '-80,-120': 'hospital' };
@@ -222,7 +217,10 @@ export function buildCity(scene, graph, rng) {
     const mx = (a.x + b.x) / 2;
     const mz = (a.z + b.z) / 2;
     const angle = Math.atan2(b.x - a.x, b.z - a.z);
-    const walk = new THREE.Mesh(new THREE.PlaneGeometry(11, len), sidewalkMat);
+    // CP24 M11: boulevard 13 m di ruas depan mall (z=-100), taman (z=100/140),
+    // bibir pantai (x=-220); ruas lain tetap 11 m.
+    const B = (mz === -100 || mz === 100 || mz === 140) && mx >= 100 && mx <= 140 || mx === -220;
+    const walk = new THREE.Mesh(new THREE.PlaneGeometry(B ? 13 : 11, len), sidewalkMat);
     walk.rotation.x = -Math.PI / 2;
     walk.rotation.z = -angle;
     walk.position.set(mx, 0.03, mz);
@@ -232,7 +230,7 @@ export function buildCity(scene, graph, rng) {
     tex.needsUpdate = true;
     tex.repeat.set(1, Math.max(1, Math.round(len / 16)));
     const road = new THREE.Mesh(
-      new THREE.PlaneGeometry(7.5, len),
+      new THREE.PlaneGeometry(9.5, len),
       new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }),
     );
     road.rotation.x = -Math.PI / 2;
