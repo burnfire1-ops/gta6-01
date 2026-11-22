@@ -161,6 +161,27 @@ function buildInd(g,c,b){
  c.push({x:-160,z:80,r:16});
 }
 
+// CP24 M6: RS Teluk Cahaya (-80,-120): gedung putih 4 lantai + salib merah + helipad. Tetap, tanpa rng().
+function buildHospital(g,c,b){
+ const A=(mt,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);g.add(m);return m;};
+ const wm=MM({color:0xf5f7f5,roughness:0.85});
+ A(wm,-80,8.5,-120,22,17,20).castShadow=true;
+ A(MM({color:0xd8d8d8}),-80,17.2,-120,22.6,0.4,20.6);
+ const dm=MM({color:0x23414f,roughness:0.7});
+ for(let f=0;f<4;f++)A(dm,-80,3+f*4,-109.7,18,1.4,0.2);
+ const rm=MM({color:0xd91e1e,roughness:0.6});
+ A(rm,-80,11,-109.6,1.4,5.5,0.3);
+ A(rm,-80,11,-109.6,5.5,1.4,0.3);
+ A(rm,-80,11,-130.4,1.4,5.5,0.3);
+ A(rm,-80,11,-130.4,5.5,1.4,0.3);
+ A(MM({color:0x2c3140}),-80,17.55,-120,9,0.3,9);
+ const hm=MM({color:0xffd166,roughness:0.6});
+ A(hm,-81.2,17.85,-120,0.5,0.15,3);
+ A(hm,-78.8,17.85,-120,0.5,0.15,3);
+ A(hm,-80,17.85,-120,1.9,0.15,0.5);
+ c.push({x:-80,z:-120,r:16});
+}
+
 export function buildCity(scene, graph, rng) {
   const colliders = [];
   const lamps = [];
@@ -250,7 +271,7 @@ export function buildCity(scene, graph, rng) {
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
       const kind = FACILITIES[`${bx},${bz}`];
-      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); if (kind === 'fair') buildFair(group, colliders, boxGeo); if (kind === 'industrial') buildInd(group, colliders, boxGeo); continue; }
+      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); if (kind === 'fair') buildFair(group, colliders, boxGeo); if (kind === 'industrial') buildInd(group, colliders, boxGeo); if (kind === 'hospital') buildHospital(group, colliders, boxGeo); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
