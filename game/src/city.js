@@ -274,12 +274,14 @@ export function buildCity(scene, graph, rng) {
     facadeMats[key] = { mat, roofMat, hMin: d.hMin, hMax: d.hMax };
   }
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const B = (m, sx, sy, sz, x, y, z) => { m.scale.set(sx, sy, sz); m.position.set(x, y, z); group.add(m); return m; }; // M15
   const roofGeo = new THREE.BoxGeometry(1, 1, 1);
   // CP24 M2: strip neon dipakai mall + blok tetangga + 14 strip lama.
   const neonMat = new THREE.MeshStandardMaterial({
     color: PALETTE.neonPink, emissive: PALETTE.neonPink, emissiveIntensity: 0,
   });
   neonMat.userData.glow = true;
+  const balMat = MM({ color: 0x2c3444, roughness: 0.8 }); // M15: balkon+pintu
 
   const half = CITY.half;
   const spacing = CITY.roadSpacing;
@@ -309,6 +311,12 @@ export function buildCity(scene, graph, rng) {
         roof.scale.set(w + 0.8, 0.8, dep + 0.8);
         roof.position.set(x, h + 0.4, z);
         group.add(roof);
+        // M15: varian dari koordinat blok (tanpa rng).
+        const v = (Math.abs(bx) + Math.abs(bz) * 3 + i) % 3;
+        B(new THREE.Mesh(boxGeo, balMat), 2, 3, 0.3, x - w * 0.28, 1.5, z + dep / 2 + 0.1);
+        if (v === 0 && h > 10) { B(new THREE.Mesh(boxGeo, balMat), w * 0.5, 0.3, 1.4, x, h * 0.55, z + dep / 2 + 0.6); B(new THREE.Mesh(boxGeo, d.roofMat), w * 0.5, 1, 0.12, x, h * 0.55 + 0.65, z + dep / 2 + 1.25); }
+        else if (v === 1) { roof.rotation.z = 0.12; B(new THREE.Mesh(boxGeo, d.roofMat), 1.2, 0.5, dep * 0.9, x, h + 1.05, z); }
+        else if (h > 10) { B(new THREE.Mesh(boxGeo, d.mat), w * 0.7, 3, dep * 0.7, x, h + 1.5, z).castShadow = true; roof.position.y = h + 3.4; }
         // CP24 M2: neon di fasad selatan bangunan blok tetangga mall (80/160,-120).
         if (bz === -120 && (bx === 80 || bx === 160)) {
           const ns = new THREE.Mesh(boxGeo, neonMat);
