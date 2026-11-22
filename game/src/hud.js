@@ -1,4 +1,6 @@
 
+import { districtAt } from './road-graph.js';
+const DN={a:'Boulevard Art-Deco',n:'Distrik Neon',p:'Pelabuhan',r:'Bukit Residensial'};
 const STAR_FULL = '★';
 const STAR_EMPTY = '☆';
 const MAX_WANTED = 5;
@@ -54,6 +56,8 @@ export function createHud() {
     menuPause: $('menu-pause'),
     menuControls: $('menu-controls'),
     toastEl: $('toast'),
+    districtCard: $('district-card'),
+    districtName: $('district-name'),
     clock: $('clock'),
     speed: $('speed'),
   };
@@ -84,6 +88,7 @@ export function createHud() {
     timeHours: null,
     speedKmh: null,
   };
+  let cardTimer;
   let lastMinimapAt = 0;
   let lastMinimapPlayer = null;
   let toastTimer = null;
@@ -339,6 +344,14 @@ export function createHud() {
       const mk = normPoint(state.minimap.missionMarker);
       if (pp && mk) {
         distanceText = Math.round(Math.hypot(mk.x - pp.x, mk.z - pp.z)) + ' m';
+      }
+      const d = pp && districtAt(pp.x, pp.z);
+      if (d && d !== last.district && el.districtCard && el.districtName) {
+        last.district = d;
+        el.districtName.textContent = DN[d[0]];
+        el.districtCard.style.display='block';
+        clearTimeout(cardTimer);
+        cardTimer = setTimeout(() => { el.districtCard.style.display='none'; }, 2800);
       }
     }
     if (distanceText !== last.objectiveDistance) {
