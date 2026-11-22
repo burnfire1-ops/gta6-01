@@ -10,6 +10,13 @@ const LABELS = [
 ];
 
 function pt(p) { if (!p || typeof p !== 'object') return null; return { x: p.x ?? 0, z: p.z ?? p.y ?? 0 }; }
+const FAC = [
+  ['CAHAYA PLAZA', 120, -120, -28],
+  ['RS TELUK CAHAYA', -80, -120, -28],
+  ['TAMAN KOTA', 120, 120, 28],
+  ['TAMAN RIA', -200, 120, 0],
+  ['PELABUHAN', -160, 80, 0],
+];
 export function createBigMap(canvas) {
   const c = canvas ? canvas.getContext('2d') : null;
   const X = (x) => OX + (x + 300) * S;
@@ -22,8 +29,8 @@ export function createBigMap(canvas) {
     c.clearRect(0, 0, w, h);
     c.fillStyle = '#0e2f4d';
     c.fillRect(0, 0, w, h);
+    for (const [f, x, z] of [['#5a3d22', -220, -220], ['#143c3c', 0, -220], ['#38322c', -220, 0], ['#2e4023', 0, 0]]) { c.fillStyle = f; c.fillRect(X(x), Y(z), 220 * S, 220 * S); }
     c.fillStyle = '#22392c';
-    c.fillRect(X(-220), Y(-220), 440 * S, 440 * S);
     c.fillRect(X(-300), Y(100), 80 * S, 40 * S);
     const g = d.graph;
     if (g && Array.isArray(g.edges)) {
@@ -44,6 +51,9 @@ export function createBigMap(canvas) {
     c.font = 'bold 15px sans-serif';
     c.textAlign = 'center';
     for (const [name, x, z] of LABELS) c.fillText(name, X(x), Y(z));
+    c.fillStyle = GOLD;
+    c.font = 'bold 11px sans-serif';
+    for (const [n, x, z, dy] of FAC) { c.fillRect(X(x) - 4, Y(z) - 4, 8, 8); c.fillText(n, X(x), Y(z) + dy); }
     if (g && Array.isArray(g.nodes)) {
       const st = g.nodes.find((n) => n && n.policeStation);
       if (st) {
@@ -113,6 +123,10 @@ export function createBigMap(canvas) {
       c.fill();
       c.stroke();
       c.restore();
+      const dn = pp.x < 0 ? (pp.z < 0 ? 'Boulevard Art-Deco' : 'Pelabuhan') : (pp.z < 0 ? 'Distrik Neon' : 'Bukit Residensial');
+      c.fillStyle = '#eef1f5';
+      c.font = 'bold 13px sans-serif';
+      c.fillText('KAMU: ' + dn, w / 2, h - 22);
     }
   }
 
