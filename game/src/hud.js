@@ -38,6 +38,7 @@ export function createHud() {
   const el = {
     hud: $('hud'),
     minimap: $('minimap'),
+    minimapWrap: $('minimap-wrap'),
     healthBar: $('health-bar'),
     healthText: $('health-text'),
     armorBar: $('armor-bar'),
@@ -422,6 +423,7 @@ export function createHud() {
   }
 
   function showMenu(name) {
+    for (const n of [el.minimapWrap, el.wantedStars, el.objectivePanel, el.vehiclePanel, el.toastEl, el.districtCard]) if (n) n.style.visibility = name === 'title' ? 'hidden' : '';
     const show = (node, on) => {
       if (!node) return;
       node.style.display = on ? 'flex' : 'none';
