@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { hasLineOfSight } from './police-pursuit.js';
+import { createRandom } from './random.js';
+import { SEED } from './config.js';
 
 const SHIRT_COLORS = [0xe8b4b8, 0x8fb8d8, 0xd8c98f, 0x9fd8a8, 0xc9a0d8, 0xd8d8d8, 0xe07856, 0x5a7a9a];
 const SKIN_COLORS = [0xe8b88a, 0xc98e6a, 0x8a5a3a, 0xf0c8a0, 0x6a4530];
@@ -43,6 +45,11 @@ export function createPedestrians(scene, graph, rng) {
   let lastCtx = null;
   let crimeSeq = 0;
   const pendingReports = [];
+  // M8: 2 geng Tier 1 — aliran rng sendiri (SEED+99) supaya rng utama netral.
+  const grng = createRandom(SEED + 99);
+  const GANGS = { dermaga: [0x8a1f1f, -160, 80], neon: [0x6a1f8a, 120, -120] };
+  const OFF = [[-14.5, 14.5], [0, 14.5], [14.5, 14.5]];
+  const gangPoi = (n) => { const g = GANGS[n]; return { x: g[1] + (grng() * 2 - 1) * 12, z: g[2] + (grng() * 2 - 1) * 12 }; };
 
   function randomPoi() {
     const es = graph && graph.edges;
@@ -104,18 +111,22 @@ export function createPedestrians(scene, graph, rng) {
     w.routeIdx = 0;
   }
 
-  function makeWalker() {
-    const color = SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)];
+  function retarget(w) { setTarget(w, w.gang ? gangPoi(w.gang) : randomPoi()); }
+
+  function makeWalker(gn, i) {
+    const g = gn ? GANGS[gn] : null;
+    const color = g ? g[0] : SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)];
     const mesh = buildWalkerMesh(color);
-    const start = randomPoi();
+    const start = g ? { x: g[1] + OFF[i][0], z: g[2] + OFF[i][1] } : randomPoi();
+    const R = g ? grng : rand;
     const w = {
-      mesh, color,
+      mesh, color, gang: gn || null,
       pos: { x: start.x, z: start.z },
-      heading: rand() * Math.PI * 2,
+      heading: R() * Math.PI * 2,
       speed: 0,
-      walkSpeed: 1.2 + rand() * 0.6,
+      walkSpeed: 1.2 + R() * 0.6,
       state: 'walk',
-      target: randomPoi(),
+      target: g ? gangPoi(gn) : randomPoi(),
       idleTimer: 0,
       panicTimer: 0,
       avoidTarget: null,
@@ -132,6 +143,7 @@ export function createPedestrians(scene, graph, rng) {
   }
 
   for (let i = 0; i < 48; i++) walkers.push(makeWalker());
+  for (const gn of ['dermaga', 'neon']) for (let i = 0; i < 3; i++) walkers.push(makeWalker(gn, i));
 
   function onCrimeSeen(pos) {
     crimeSeq++;
@@ -259,11 +271,11 @@ export function createPedestrians(scene, graph, rng) {
           z: w.pos.z + Math.cos(away) * 10,
         };
         stepToward(w, fleeTarget, 4, d);
-        if (w.panicTimer <= 0) { w.state = 'walk'; setTarget(w, randomPoi()); w.threatPos = null; }
+        if (w.panicTimer <= 0) { w.state = 'walk'; retarget(w); w.threatPos = null; }
       } else if (w.state === 'idle') {
         w.speed = 0;
         w.idleTimer -= d;
-        if (w.idleTimer <= 0) { w.state = 'walk'; setTarget(w, randomPoi()); }
+        if (w.idleTimer <= 0) { w.state = 'walk'; retarget(w); }
       } else if (w.state === 'avoid') {
         w.idleTimer -= d;
         if ((w.avoidTarget && stepToward(w, w.avoidTarget, 2.5, d)) || w.idleTimer <= 0) {
@@ -288,7 +300,7 @@ export function createPedestrians(scene, graph, rng) {
           const wp = (w.route && w.route[w.routeIdx]) || w.target;
           if (stepToward(w, wp, w.walkSpeed, d)) {
             if (w.route && w.routeIdx < w.route.length - 1) w.routeIdx += 1;
-            else { w.state = 'idle'; w.idleTimer = 2 + rand() * 3; }
+            else { w.state = 'idle'; w.idleTimer = 2 + (w.gang ? grng() : rand()) * 3; }
           }
         }
       }
@@ -299,7 +311,7 @@ export function createPedestrians(scene, graph, rng) {
         if (dx * dx + dz * dz < r * r) {
           const dd = Math.hypot(dx, dz) || 1;
           w.pos.x = c.x + dx / dd * r; w.pos.z = c.z + dz / dd * r;
-          if (Math.hypot(w.target.x - c.x, w.target.z - c.z) < c.r) setTarget(w, randomPoi());
+          if (Math.hypot(w.target.x - c.x, w.target.z - c.z) < c.r) retarget(w);
           const k = (dx * (w.target.z - w.pos.z) - dz * (w.target.x - w.pos.x) >= 0 ? 1 : -1) * 1.5 * d / dd;
           w.pos.x += -dz * k; w.pos.z += dx * k;
         }
