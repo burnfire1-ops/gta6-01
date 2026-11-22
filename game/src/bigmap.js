@@ -7,7 +7,12 @@ const LABELS = [
   ['Distrik Neon', 110, -110],
   ['Pelabuhan', -110, 110],
   ['Bukit Residensial', 110, 110],
+  ['Jl. Pelabuhan',-20,120,1],
+  ['Blvd. Senja',0,-180,1],
+  ['Jl. Neon',150,-60,1],
+  ['Jl. Bukit',140,180,1],
 ];
+const LG=[['◆ Misi',GOLD],['● Polisi','#4f8ef7'],['● Paket',GOLD],['▲ Kamu',GOLD]];
 
 function pt(p) { if (!p || typeof p !== 'object') return null; return { x: p.x ?? 0, z: p.z ?? p.y ?? 0 }; }
 const FAC = [
@@ -50,9 +55,9 @@ export function createBigMap(canvas) {
     c.fillStyle = 'rgba(244,241,230,.85)';
     c.font = 'bold 15px sans-serif';
     c.textAlign = 'center';
-    for (const [name, x, z] of LABELS) c.fillText(name, X(x), Y(z));
+    for(const[n,x,z,s]of LABELS){c.font=s?'11px sans-serif':'bold 15px sans-serif';c.fillText(n,X(x),Y(z));}
     c.fillStyle = GOLD;
-    c.font = 'bold 11px sans-serif';
+    c.font = 'bold 12px sans-serif';
     for (const [n, x, z, dy] of FAC) { c.fillRect(X(x) - 4, Y(z) - 4, 8, 8); c.fillText(n, X(x), Y(z) + dy); }
     if (g && Array.isArray(g.nodes)) {
       const st = g.nodes.find((n) => n && n.policeStation);
@@ -128,6 +133,7 @@ export function createBigMap(canvas) {
       c.font = 'bold 13px sans-serif';
       c.fillText('KAMU: ' + dn, w / 2, h - 22);
     }
+    c.textAlign='left';let y=537;LG.forEach(L=>{c.fillStyle=L[1];c.fillText(L[0],24,y+=15);});
   }
 
   return { draw };
