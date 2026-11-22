@@ -243,7 +243,7 @@ export function createHud() {
         const p = normPoint((u && u.car && u.car.pos) || (u && u.pos) || u);
         if (p) nr = Math.min(nr, Math.hypot(p.x - playerPos.x, p.z - playerPos.z));
       }
-      if (nr < Infinity) { mm.fillStyle = '#8fb8ff'; mm.fillText('POLISI ' + data.wanted + ' • ' + Math.round(nr) + 'm', cx, 152); }
+      if (nr < Infinity) { mm.fillStyle = '#8fb8ff'; mm.fillText('POLISI ' + data.wanted + ' • ' + Math.round(nr) + 'm', cx, 136); }
     }
   }
 
