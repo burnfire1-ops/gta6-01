@@ -275,6 +275,9 @@ export function buildCity(scene, graph, rng) {
   }
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   const B = (m, sx, sy, sz, x, y, z) => { m.scale.set(sx, sy, sz); m.position.set(x, y, z); group.add(m); return m; }; // M15
+// M16: zebra.
+const ZM=MM({color:0xffffff});
+for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112,0]])for(let i=-2;i<3;i++)B(new THREE.Mesh(boxGeo,ZM),a?.7:7,.04,a?7:.7,x+i*1.25*a,.07,z+i*1.25*(1-a));
   const roofGeo = new THREE.BoxGeometry(1, 1, 1);
   // CP24 M2: strip neon dipakai mall + blok tetangga + 14 strip lama.
   const neonMat = new THREE.MeshStandardMaterial({
