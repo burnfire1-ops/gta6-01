@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildWalkerMesh } from './pedestrians.js';
 
-const REWARDS = [200, 150, 250, 300, 400, 450, 500, 1000];
+const REWARDS = [200, 150, 250, 300, 400, 450, 500, 1000, 350];
 
 function isNight(t) { return typeof t === 'number' && (t >= 18 || t < 6); }
 
@@ -72,6 +72,9 @@ export function createMissions(ctx) {
     ['Gudang Pelabuhan', 'Masuk gudang dan kalahkan 3 penjaga. Dekati penjaga lalu tekan F atau E untuk memukul.', 5, 'Pelabuhan', port],
     ['Konvoi Tiga Titik', 'Lewati 3 checkpoint sebelum waktu habis: Boulevard, Neon, Pelabuhan.', 6, 'Teluk Cahaya', boulevard],
     ['Pelarian Final', 'Lintasi kota dengan wanted 5 dan capai ujung kota. Semua sistem sekaligus.', 7, 'Bukit', hill],
+    ['Antar Pasien ke RS', 'Antar pasien ke RS Teluk Cahaya. Berkendara ke marker kuning.', 8, 'Artdeco', { x: -80, z: -120 }],
+    ['Antar Barang ke Industri', 'Antar barang ke gudang di wilayah Geng Dermaga.', 3, 'Pelabuhan', { x: -160, z: 80 }],
+    ['Antar ke Taman Hiburan', 'Antar pengunjung ke Taman Hiburan di tepi pantai. Berkendara ke marker kuning.', 4, 'Pelabuhan', { x: -200, z: 120 }],
   ];
   const list = DEFS.map(([title, desc, r, district, targetPos], index) =>
     ({ index, title, desc, reward: REWARDS[r], district, targetPos }));
@@ -228,6 +231,8 @@ export function createMissions(ctx) {
       state.objectiveText = 'Curi mobil apa saja, lalu bawa ke marker Boulevard.';
     } else if (index === 3) {
       state.objectiveText = 'Antar paket ke Distrik Neon saat malam (18:00-06:00).';
+    } else if (index >= 8) {
+      state.objectiveText = 'Antar ke marker kuning.';
     } else {
       state.objectiveText = 'Antar paket ke marker kuning di Pelabuhan.';
     }
