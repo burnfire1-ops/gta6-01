@@ -6,6 +6,8 @@
 
 Teluk Cahaya — an original open-world crime game in the spirit of GTA 6, built for the make.fun gta6-01 bounty. A tropical coastal city to explore on foot and by car, with traffic and pedestrians, cars to steal, a wanted system and police, missions and a story, combat, a HUD with a minimap, a start and a save. Everything in it is original: the city, characters, vehicles, names, story, art, sound and music. No Rockstar Games content.
 
+Round 5 adds to the city: Cahaya Plaza mall, the Taman Ria ferris wheel on the beachfront, RS Teluk Cahaya hospital, two street gangs (Geng Dermaga and Anak Neon), three new delivery missions, a cinematic title screen over the golden-hour city, and a coloured big map with street names and a legend.
+
 Playable offline in a desktop browser from static files: serve `game/` and open `game/index.html`.
 
 ## How to play
@@ -15,7 +17,7 @@ You are Raka, a freelance courier in Teluk Cahaya, a fictional tropical coastal 
 - **WASD** move · **mouse** orbit camera · **Shift** run · **Space** jump / handbrake
 - **F** interact / enter-exit car · **LMB** punch / shoot · **RMB** aim · **R** reload · **M** map · **Esc** pause
 - **Wanted 1–5, witness-based**: the police only come when a cop sees you or a witness reports you (2 s). Lose them by hiding (6/10/15 s by stars), swapping cars in a quiet place, stopping in an alley, or paying for a respray. The safehouse clears 1–2 stars. Getting caught (BUSTED) or knocked out (WASTED) costs a fine — never game over.
-- **8 story missions** from the courier office: deliveries, a car theft, your first wanted level, a night run through the Neon District, a car chase, a warehouse brawl, a timed three-stop convoy, and a cross-city escape. Fail a mission and you restart at its checkpoint with a small fine.
+- **11 story missions** from the courier office: deliveries, a car theft, your first wanted level, a night run through the Neon District, a car chase, a warehouse brawl, a timed three-stop convoy, and a cross-city escape. Fail a mission and you restart at its checkpoint with a small fine.
 - **Combat**: fists plus one pistol (soft lock-on, ammo refills at the safehouse), and ramming with cars. No shooting from cars.
 - **HUD + minimap** drawn from the same road graph the AI drives on (mission marker, police dots, search circle, hidden packages), menus, and versioned saves in localStorage (3 slots + autosave on mission complete / safehouse entry).
 - **Synthesized audio**: adaptive music (Web Audio, no audio files) that tenses up with your wanted level, sirens, engine and city ambience. Day/night cycle ~12 minutes; traffic density follows the clock.
