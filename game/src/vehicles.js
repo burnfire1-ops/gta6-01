@@ -61,6 +61,7 @@ export function normalizeDriveInput(input) {
 
 export function buildCarMesh(type) {
   const spec = typeSpec(type);
+  const sp = type === 'sport' ? 0.08 : 0;
   const g = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({
     color: new THREE.Color(spec.color), metalness: 0.55, roughness: 0.35,
@@ -69,14 +70,23 @@ export function buildCarMesh(type) {
   const dark = new THREE.MeshStandardMaterial({ color: 0x0c0e11, roughness: 0.9 });
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.7, 4.2), paint);
-  body.position.y = 0.55;
+  body.position.y = 0.55 - sp;
   body.castShadow = true;
   g.add(body);
+
+  // M14: bemper + grille + spion (semua varian), pakai ulang material dark.
+  const mk = (m, w, h, d, x, y, z) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); g.add(q); };
+  mk(dark, 2.06, 0.22, 0.18, 0, 0.42, 2.14);
+  mk(dark, 2.06, 0.22, 0.18, 0, 0.42, -2.14);
+  mk(dark, 0.8, 0.22, 0.06, 0, 0.62, 2.13);
+  for (const s of [-1, 1]) mk(paint, 0.14, 0.12, 0.24, s * 1.02, 1.05, 0.5);
+  if (type === 'taxi') mk(new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xcc9900, emissiveIntensity: 1.2 }), 0.9, 0.22, 0.4, 0, 1.62, -0.2);
+  if (type === 'sport') mk(dark, 1.8, 0.08, 0.5, 0, 0.86, -1.95);
 
   const cabinLen = type === 'van' ? 3.0 : type === 'pickup' ? 1.4 : 2.0;
   const cabinH = type === 'van' ? 0.85 : 0.6;
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.7, cabinH, cabinLen), glass);
-  cabin.position.set(0, 0.9 + cabinH / 2, type === 'pickup' ? 0.9 : -0.2);
+  cabin.position.set(0, 0.9 + cabinH / 2 - sp, type === 'pickup' ? 0.9 : -0.2);
   cabin.castShadow = true;
   g.add(cabin);
 
