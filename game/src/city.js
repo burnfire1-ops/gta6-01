@@ -144,6 +144,22 @@ function buildPark(g, c, b) {
   for(const [x,z] of [[114,116],[126,116],[114,124],[126,124]]) A(MM({ color: 0x7a5a3a }), x, 0.55, z, 2.4, 0.5, 0.9);
   c.push({x:120,z:120,r:6});
 }
+// CP24 M5: industri.
+function buildInd(g,c,b){
+ const A=(mt,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);g.add(m);return m;};
+ const rm=MM({color:0x3a3a3a});
+ A(MM({color:0x9a8f80}),-165,4.5,74,18,9,12).castShadow=true;
+ A(rm,-165,9.3,74,18.6,0.6,12.6);
+ A(MM({color:0x8f7d68}),-151,3.5,86,11,7,10).castShadow=true;
+ A(rm,-151,7.3,86,11.6,0.6,10.6);
+ let ch=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.7,20,10),MM({color:0x9a8a7a}));
+ ch.position.set(-172,10,90);g.add(ch);
+ ch=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.35,1.4,10),MM({color:0x2a2a2a}));
+ ch.position.set(-172,19.8,90);g.add(ch);
+ const cc=[[0xd94f3d,-153,70,1.25],[0x2e7fd9,-149,70,1.25],[0x2ec96a,-153,70,3.75],[0xffd166,-149,77,1.25],[0xff8a3d,-153,77,1.25]];
+ for(const [k,x,z,y] of cc)A(MM({color:k}),x,y,z,2.5,2.5,6);
+ c.push({x:-160,z:80,r:16});
+}
 
 export function buildCity(scene, graph, rng) {
   const colliders = [];
@@ -234,7 +250,7 @@ export function buildCity(scene, graph, rng) {
   for (let bz = -half + spacing / 2; bz < half; bz += spacing) {
     for (let bx = -half + spacing / 2; bx < half; bx += spacing) {
       const kind = FACILITIES[`${bx},${bz}`];
-      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); if (kind === 'fair') buildFair(group, colliders, boxGeo); continue; }
+      if (kind) { burnRngForBlock(rng); if (kind === 'mall') buildMall(group, colliders, boxGeo, neonMat); if (kind === 'park') buildPark(group, colliders, boxGeo); if (kind === 'fair') buildFair(group, colliders, boxGeo); if (kind === 'industrial') buildInd(group, colliders, boxGeo); continue; }
       const district = districtAt(bx, bz);
       const d = facadeMats[district];
       const count = rng() < 0.3 ? 2 : 1;
