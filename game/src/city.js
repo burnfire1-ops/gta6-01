@@ -113,7 +113,7 @@ function buildFair(g,c,b){
  const cb=K(new THREE.CylinderGeometry(4,4.4,0.8,12),MM({color:0xfff2c0,roughness:0.7}));cb.position.set(-188,0.4,108);g.add(cb);
  const ct=new THREE.Group();ct.position.set(-188,0.8,108);ct.userData.spin='y';g.add(ct);
  const cp=K(new THREE.CylinderGeometry(0.3,0.3,4.4,8),sm);cp.position.y=2.2;ct.add(cp);
- const rf=K(new THREE.ConeGeometry(4.6,2.4,8),MM({color:0xff1f8a,roughness:0.6}));rf.position.y=5.2;ct.add(rf);
+ const rf=K(new THREE.ConeGeometry(4.6,2.4,8),MM({color:0xff1f8a,roughness:0.6}));rf.position.y=4.8;ct.add(rf);
  for(let i=0;i<4;i++){const a=i*P/2;const h=K(b,MM({color:gc[i],roughness:0.6}));h.scale.set(0.8,1.6,0.8);h.position.set(Math.cos(a)*2.6,1.6,Math.sin(a)*2.6);ct.add(h);}
  for(const [x,z] of [[-227,110],[-227,126],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=K(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
  c.push({x:-200,z:120,r:8},{x:-188,z:108,r:5});
@@ -128,7 +128,7 @@ function buildPark(g, c, b) {
   A(gm, 120, 6.5, 120, 2, 9, 2).castShadow = true;
   const tip = K(new THREE.ConeGeometry(1.6, 2.6, 4), gm);
   tip.position.set(120,12.3,120);g.add(tip);
-  for(const [x,z] of [[114,116],[126,116],[114,124],[126,124]]) A(MM({ color: 0x7a5a3a }), x, 0.55, z, 2.4, 0.5, 0.9);
+  for(const [x,z] of [[114,116],[126,116],[114,124],[126,124]]) A(MM({ color: 0x7a5a3a }), x, 0.25, z, 2.4, 0.5, 0.9);
   c.push({x:120,z:120,r:6});
 }
 function buildInd(g,c,b){
@@ -171,7 +171,7 @@ function buildStreet(g,b){
  const A=(mt,x,y,z,sx,sy,sz)=>{const m=K(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);g.add(m);};
  const dk=MM({color:0x2c3444});
  for(const [x,z] of [[108,-106.8],[128,106.8]]){
-  A(MM({color:0x7a5a3a}),x,.7,z,1.8,1,1.2);
+  A(MM({color:0x7a5a3a}),x,.5,z,1.8,1,1.2);
   A(MM({color:0xff8a3d}),x,1.5,z,2,.15,1.4);
   A(dk,x,.3,z,1.65,.6,.25);
  }
@@ -329,6 +329,7 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   bridge.position.set(-262, 1.2, 120);
   bridge.castShadow = true;
   group.add(bridge);
+  const r=K(boxGeo,bridgeMat);r.scale.set(10.2,.3,10);r.position.set(-219,.78,120);r.rotation.z=-.173;group.add(r);
   for (const dz of [-5.4, 5.4]) {
     const rail = K(boxGeo, MM({ color: 0xffd166, roughness: 0.6 }));
     rail.scale.set(76, 1, 0.4);
@@ -342,7 +343,7 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   island.position.set(-300, -0.4, 120);
   group.add(island);
   const lighthouse = new THREE.Group();
-  lighthouse.position.set(-300, 1, 120);
+  lighthouse.position.set(-300, 0.6, 120);
   const lhBase = K(
     new THREE.CylinderGeometry(3.2, 4.2, 18, 10),
     MM({ color: 0xfff6e8, roughness: 0.8 }),
@@ -369,8 +370,9 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
       color: 0xfff2b0, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false,
     }),
   );
+  beam.geometry.translate(0,-17,0);
   beam.rotation.z = P / 2;
-  beam.position.set(18, 19, 0);
+  beam.position.set(0, 19, 0);
   beam.userData.spinBeam = true;
   lighthouse.add(beam);
   group.add(lighthouse);
@@ -434,7 +436,7 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   for (let i = 0; i < 10; i += 1) {
     const bench = K(boxGeo, benchMat);
     bench.scale.set(2.4, 0.5, 0.9);
-    bench.position.set(-200 + i * 40, 0.55, -84.5);
+    bench.position.set(-200 + i * 40, 0.25, -84.5);
     group.add(bench);
   }
   const signTex=textTex(64,64,'#ffd166','#101a33','bold 34px system-ui, sans-serif','TC');
@@ -450,11 +452,6 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
     sign.position.set(sx + 6.6, 3.6, sz + 6.6);
     group.add(sign);
   }
-  for (let i = 0; i < 14; i += 1) {
-    const strip = K(boxGeo, neonMat);
-    strip.scale.set(10 + rng() * 8, 0.5, 0.5);
-    strip.position.set(20 + rng() * 180, 6 + rng() * 18, -200 + rng() * 20);
-    group.add(strip);
-  }
+  for(let i=0;i<14;i++){rng();rng();rng();rng();}
   return { colliders, landmarks: { tower, lighthouse, bridge }, lamps, facilities: FACILITIES };
 }

@@ -62,7 +62,7 @@ export function createRoadGraph() {
   const b0 = 2000;
   const b1 = 2001;
   addNode(b0, -260, 120);
-  addNode(b1, -300, 120);
+  addNode(b1, -292, 120);
   const linkNode = 2002;
   addNode(linkNode, -220, 120);
   addEdge(bridgeStart, linkNode);
