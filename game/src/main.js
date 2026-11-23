@@ -315,6 +315,8 @@ function step(dt) {
     lastObjective = objective;
     hud.setObjective(objective);
   }
+  const aM = missions.active;
+  const nM = aM ? missions.list[aM.index + 1] : null;
   hud.update({
     wanted: game.state.wanted,
     wantedEscaping: police.wantedEscaping,
@@ -324,6 +326,7 @@ function step(dt) {
     speed: player.speed,
     vehicle: player.currentCar ? (player.currentCar.name || player.currentCar.type) : null,
     vehicleHealth: player.currentCar?.health,
+    mission: { index: aM ? aM.index : null, title: aM ? aM.title : 'Teluk Cahaya', total: missions.list.length, done: missions.completed.length, next: nM ? nM.title : null },
     objective,
     timeHours: dayNight.timeHours,
     isNight: dayNight.isNight(),

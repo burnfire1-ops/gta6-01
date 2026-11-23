@@ -39,6 +39,7 @@ export function createHud() {
     hud: $('hud'),
     minimap: $('minimap'),
     minimapWrap: $('minimap-wrap'),
+    dispatchPanel: $('dispatch-panel'),
     healthBar: $('health-bar'),
     healthText: $('health-text'),
     armorBar: $('armor-bar'),
@@ -50,6 +51,9 @@ export function createHud() {
     objectiveTitle: $('objective-title'),
     objectiveText: $('objective-text'),
     objectiveDistance: $('objective-distance'),
+    missionStage: $('mission-stage'),
+    missionBar: $('mission-bar'),
+    missionNext: $('mission-next'),
     vehiclePanel: $('vehicle-panel'),
     vehicleName: $('vehicle-name'),
     vehicleHealthBar: $('vehicle-health-bar'),
@@ -85,6 +89,10 @@ export function createHud() {
     objectiveTitle: null,
     objectiveText: null,
     objectiveDistance: null,
+    missionStage: null,
+    missionDone: null,
+    missionNext: null,
+    dispatchKey: null,
     vehicleName: null,
     vehicleHealth: null,
     timeHours: null,
@@ -237,15 +245,6 @@ export function createHud() {
     mm.textAlign = 'center';
     mm.textBaseline = 'top';
     mm.fillText('N', cx, 4);
-    // G0-2: dispatch mini (dihidupkan lagi): teks live wanted + jarak polisi terdekat.
-    if (data.wanted > 0 && Array.isArray(data.policeUnits)) {
-      let nr = Infinity;
-      for (const u of data.policeUnits) {
-        const p = normPoint((u && u.car && u.car.pos) || (u && u.pos) || u);
-        if (p) nr = Math.min(nr, Math.hypot(p.x - playerPos.x, p.z - playerPos.z));
-      }
-      if (nr < Infinity) { mm.fillStyle = '#8fb8ff'; mm.fillText('POLISI ' + data.wanted + ' • ' + Math.round(nr) + 'm', cx, 136); }
-    }
   }
 
   function normalize(raw) {
@@ -270,6 +269,7 @@ export function createHud() {
       missionTitle:
         pick(raw.missionTitle, raw.mission && raw.mission.title, mm.missionTitle || null),
       objectiveText: pick(raw.objectiveText, raw.objective),
+      mission: raw.mission || null,
       vehicleName: pick(raw.vehicleName, raw.vehicle),
       vehicleHealth: raw.vehicleHealth,
       timeHours: raw.timeHours,
@@ -370,6 +370,15 @@ export function createHud() {
       last.objectiveDistance = distanceText;
       if (el.objectiveDistance) el.objectiveDistance.textContent = distanceText;
     }
+    const mi = state.mission;
+    if (mi) {
+      const st = mi.index == null ? 'FREE ROAM' : 'MISI ' + (mi.index + 1) + '/' + (mi.total || 11);
+      if (st !== last.missionStage) { last.missionStage = st; if (el.missionStage) el.missionStage.textContent = st; }
+      const dn = Math.round(100 * (mi.done || 0) / (mi.total || 11));
+      if (dn !== last.missionDone) { last.missionDone = dn; setBar(el.missionBar, null, dn); }
+      const nx = mi.next ? 'NEXT: ' + mi.next : '';
+      if (nx !== last.missionNext) { last.missionNext = nx; if (el.missionNext) { el.missionNext.textContent = nx; el.missionNext.style.display = nx ? 'block' : 'none'; } }
+    }
     if (el.objectivePanel) {
       el.objectivePanel.style.display =
         last.objectiveTitle || last.objectiveText ? 'block' : 'none';
@@ -385,7 +394,8 @@ export function createHud() {
       if (el.vehicleHealthBar) {
         setBar(el.vehicleHealthBar, el.vehicleHealthText, state.vehicleHealth, String(Math.round(state.vehicleHealth)));
       } else if (el.vehicleHealthText) {
-        el.vehicleHealthText.textContent = 'Kesehatan ' + Math.round(state.vehicleHealth) + '%';
+        const vh = Math.round(state.vehicleHealth);
+        el.vehicleHealthText.textContent = 'Kesehatan ' + vh + '% · Rusak ' + (100 - vh) + '%';
       }
     }
     if (el.vehiclePanel) {
@@ -412,6 +422,26 @@ export function createHud() {
         packages: state.minimap.packages,
         wanted: state.wanted || 0,
       });
+    }
+    {
+      const pp = normPoint(state.minimap.playerPos);
+      const us = (state.minimap.policeUnits || []).filter((u) => u && u.state !== 'giveup');
+      let k = '';
+      if (state.wanted > 0 && pp && us.length) {
+        k = us.map((u, i) => {
+          const p = normPoint((u.car && u.car.pos) || u.pos || u);
+          const d = p ? Math.round(Math.hypot(p.x - pp.x, p.z - pp.z)) : 0;
+          const r = u.state === 'pursue' ? 'PENGEJAR' : u.state === 'search' ? 'PENCARI' : 'PATROLI';
+          return 'UNIT ' + String(i + 1).padStart(2, '0') + ' ' + r + ' ' + d + 'm';
+        }).join('|');
+      }
+      if (k !== last.dispatchKey) {
+        last.dispatchKey = k;
+        if (el.dispatchPanel) {
+          el.dispatchPanel.style.display = k ? 'block' : 'none';
+          el.dispatchPanel.innerHTML = k ? k.split('|').map((s) => '<div>' + s + '</div>').join('') : '';
+        }
+      }
     }
   }
 
