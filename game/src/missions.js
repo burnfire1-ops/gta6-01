@@ -62,7 +62,6 @@ export function createMissions(ctx) {
   const neon = pickNode(['neon']);
   const hill = pickNode(['residential']);
 
-  // [judul, deskripsi, indeks reward, distrik, target]
   const DEFS = [
     ['Paket Pertama', 'Antar paket dari pelabuhan dengan mobil pinjaman. Berkendara ke marker kuning.', 0, 'Pelabuhan', port],
     ['Mobil Sendiri', 'Curi mobil dari jalan, lalu bawa ke marker di Boulevard. Mobil terkunci butuh saksi yang tidak melihat.', 1, 'Boulevard', boulevard],

@@ -153,8 +153,11 @@ export function createHud() {
     mm.arc(cx, cy, r, 0, Math.PI * 2);
     mm.clip();
 
-    mm.fillStyle = 'rgba(10, 16, 32, 0.85)';
-    mm.fillRect(0, 0, w, h);
+    const X0 = toX(0), Y0 = toY(0);
+    mm.fillStyle = '#e89a80'; mm.fillRect(0, 0, X0, Y0);
+    mm.fillStyle = '#f5c2ac'; mm.fillRect(X0, 0, w - X0, Y0);
+    mm.fillStyle = '#d67e68'; mm.fillRect(0, Y0, X0, h - Y0);
+    mm.fillStyle = '#e59a7e'; mm.fillRect(X0, Y0, w - X0, h - Y0);
     mm.font = 'bold 11px system-ui, sans-serif';
     mm.textAlign = 'center';
     mm.textBaseline = 'middle';

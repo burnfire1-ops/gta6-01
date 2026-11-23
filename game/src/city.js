@@ -290,7 +290,6 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
         roof.scale.set(w + 0.8, 0.8, dep + 0.8);
         roof.position.set(x, h + 0.4, z);
         group.add(roof);
-        // M15: varian dari koordinat blok (tanpa rng).
         const v = (Math.abs(bx) + Math.abs(bz) * 3 + i) % 3;
         B(K(boxGeo, balMat), 2, 3, 0.3, x - w * 0.28, 1.5, z + dep / 2 + 0.1);
         if (v === 0 && h > 10) { B(K(boxGeo, balMat), w * 0.5, 0.3, 1.4, x, h * 0.55, z + dep / 2 + 0.6); B(K(boxGeo, d.roofMat), w * 0.5, 1, 0.12, x, h * 0.55 + 0.65, z + dep / 2 + 1.25); }

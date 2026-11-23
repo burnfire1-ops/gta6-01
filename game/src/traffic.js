@@ -6,7 +6,6 @@ const LANE = 2.5; // offset lajur kanan dari as jalan (CP17)
 const CAR_GAP = 4.4; // jarak pusat minimum antar mobil (CP17)
 let sepFrame = 0;
 
-// Dorong-pisah (CP17+M29a): parkir diam.
 function separateCars(cars) {
   sepFrame++;
   for (let i = 0; i < cars.length; i++) {

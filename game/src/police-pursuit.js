@@ -14,7 +14,6 @@ export function nodePos(graph, id) {
   return null;
 }
 
-// Garis pandang: 3 titik sampel a->b vs collider gedung.
 export function hasLineOfSight(a, b, colliders) {
   if (!colliders || !colliders.length) return true;
   for (const s of [0.25, 0.5, 0.75]) {
