@@ -154,7 +154,7 @@ export function buildCarMesh(type) {
 function syncMesh(car) {
   if (car.driver) car._lane = 1;
   const o = car._lane && !car._t ? 2.5 : 0;
-  car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, Math.abs(car.pos.z-120)<5?(car.pos.x<-224?car.pos.x>-300?1.8:0:car.pos.x<=-214?1.8-(car.pos.x+224)*.175:0):0, car.pos.z - Math.sin(car.heading) * o);
+  car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, Math.abs(car.pos.z-120)<5?(car.pos.x<-235?car.pos.x>-300?1.8:0:car.pos.x<=-225?1.8-(car.pos.x+235)*.18:0):0, car.pos.z - Math.sin(car.heading) * o);
   car.mesh.rotation.y = car.heading;
 }
 

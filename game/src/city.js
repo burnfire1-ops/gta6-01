@@ -115,7 +115,7 @@ function buildFair(g,c,b){
  const cp=K(new THREE.CylinderGeometry(0.3,0.3,4.4,8),sm);cp.position.y=2.2;ct.add(cp);
  const rf=K(new THREE.ConeGeometry(4.6,2.4,8),MM({color:0xff1f8a,roughness:0.6}));rf.position.y=4.8;ct.add(rf);
  for(let i=0;i<4;i++){const a=i*P/2;const h=K(b,MM({color:gc[i],roughness:0.6}));h.scale.set(0.8,1.6,0.8);h.position.set(Math.cos(a)*2.6,1.6,Math.sin(a)*2.6);ct.add(h);}
- for(const [x,z] of [[-227,110],[-227,126],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=K(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
+ for(const [x,z] of [[-227,110],[-227,128],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=K(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
  c.push({x:-200,z:120,r:8},{x:-188,z:108,r:5});
 }
 function buildPark(g, c, b) {
@@ -325,15 +325,15 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   colliders.push({ x: 0, z: 0, r: 16 });
   const bridgeMat = MM({ color: 0x8a7f72, roughness: 0.9 });
   const bridge = K(boxGeo, bridgeMat);
-  bridge.scale.set(76, 1.2, 10);
-  bridge.position.set(-262, 1.2, 120);
+  bridge.scale.set(65, 1.2, 10);
+  bridge.position.set(-267.5, 1.2, 120);
   bridge.castShadow = true;
   group.add(bridge);
-  const r=K(boxGeo,bridgeMat);r.scale.set(10.2,.3,10);r.position.set(-219,.78,120);r.rotation.z=-.173;group.add(r);
+  const r=K(boxGeo,bridgeMat);r.scale.set(10.2,.3,10);r.position.set(-230,.78,120);r.rotation.z=-.173;group.add(r);
   for (const dz of [-5.4, 5.4]) {
     const rail = K(boxGeo, MM({ color: 0xffd166, roughness: 0.6 }));
-    rail.scale.set(76, 1, 0.4);
-    rail.position.set(-262, 2.2, 120 + dz);
+    rail.scale.set(65, 1, 0.4);
+    rail.position.set(-267.5, 2.2, 120 + dz);
     group.add(rail);
   }
   const island = K(
