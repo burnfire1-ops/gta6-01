@@ -157,6 +157,7 @@ function startGame(fresh) {
     if (missions.reset) missions.reset();
     if (police.reset) police.reset();
     packages.reset();
+    missions.startMission(0);
   } else {
     const saved = saveSystem.load(1);
     if (saved) {
