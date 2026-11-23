@@ -175,8 +175,8 @@ export function createRoadGraph() {
 
   function trafficLightState(nodeIdValue, timeHours) {
     const seconds = timeHours * 3600;
-    const phase = (seconds + (nodeIdValue % 97) * 7) % 30;
-    return phase < 18 ? 'green' : 'red';
+    const phase = (seconds + (nodeIdValue % 97) * 7) % 1800;
+    return phase < 1080 ? 'green' : 'red';
   }
 
   return {

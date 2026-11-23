@@ -2,8 +2,8 @@ import { clamp, turnToward } from './vehicles.js';
 import { nodePos } from './police-pursuit.js';
 
 const NPC_TYPES = ['sedan', 'taxi', 'van', 'pickup', 'sedan', 'taxi', 'sedan'];
-const LANE = 2.5; // offset lajur kanan dari as jalan (CP17)
-const CAR_GAP = 4.4; // jarak pusat minimum antar mobil (CP17)
+const LANE = 2.5; // offset lajur kanan (CP17)
+const CAR_GAP = 4.4; // jarak min antar mobil (CP17)
 let sepFrame = 0;
 
 function separateCars(cars) {
@@ -27,13 +27,13 @@ function separateCars(cars) {
       const avx = Math.sin(a.heading) * a.speed, avz = Math.cos(a.heading) * a.speed;
       const bvx = Math.sin(b.heading) * b.speed, bvz = Math.cos(b.heading) * b.speed;
       const closing = (avx - bvx) * nx + (avz - bvz) * nz;
-      if (closing > 6 && a.driver && b.driver) {
+      if (closing > 12 && a.driver && b.driver) {
         if (sepFrame - (a._sepDmg || 0) > 30) {
-          a.health = Math.max(0, a.health - Math.min(15, (closing - 6) * 1.2));
+          a.health = Math.max(0, a.health - Math.min(15, (closing - 12) * 1.2));
           a._sepDmg = sepFrame;
         }
         if (sepFrame - (b._sepDmg || 0) > 30) {
-          b.health = Math.max(0, b.health - Math.min(15, (closing - 6) * 1.2));
+          b.health = Math.max(0, b.health - Math.min(15, (closing - 12) * 1.2));
           b._sepDmg = sepFrame;
         }
         const as = a.speed, bs = b.speed;
@@ -113,7 +113,7 @@ export function createTraffic(scene, graph, fleet, rng) {
       if (d < 14 && d > 0.01) {
         const dot = (dx * fx + dz * fz) / d;
         const lat = dx * fz - dz * fx;
-        if (d < 8 && dot > 0.7 && Math.abs(lat) < 4) return other;
+        if (other.driver && other.speed < car.speed && d < 8 && dot > 0.7 && Math.abs(lat) < 4) return other;
         if (dot > -0.2 && other.speed > 0.5 && lat > 0) return other;
       }
     }
