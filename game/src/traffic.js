@@ -40,7 +40,6 @@ function separateCars(cars) {
         a.speed = as * 0.3 + bs * 0.7;
         b.speed = bs * 0.3 + as * 0.7;
       }
-      // Crash stop: hapus laju mendekat, cegah selip ke samping.
       const fa = Math.sin(a.heading) * nx + Math.cos(a.heading) * nz;
       const fb = Math.sin(b.heading) * nx + Math.cos(b.heading) * nz;
       if (fa * a.speed > 0 && Math.abs(fa) > 0.5) a.speed = 0;
@@ -84,7 +83,6 @@ export function createTraffic(scene, graph, fleet, rng) {
     if (!fromId || !dest) { car._t.route = []; return; }
     car._t.route = planRoute(graph, fromId, dest.id);
     car._t.wp = 0;
-    // Jangan lompat ke route[1] bila jauh dari route[0] (repath); beeline diagonal memotong blok.
     const n0 = nodePos(graph, fromId);
     if (n0 && Math.hypot(n0.x - car.pos.x, n0.z - car.pos.z) < 3) car._t.wp = 1;
   }

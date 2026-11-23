@@ -155,11 +155,16 @@ export function createHud() {
 
     mm.fillStyle = 'rgba(10, 16, 32, 0.85)';
     mm.fillRect(0, 0, w, h);
+    mm.font = 'bold 11px system-ui, sans-serif';
+    mm.textAlign = 'center';
+    mm.textBaseline = 'middle';
+    mm.fillStyle = '#0e7fa8';
+    mm.fillRect(0, 0, toX(-220), h);
 
     const graph = data.graph;
     if (graph && Array.isArray(graph.edges)) {
-      mm.strokeStyle = '#20283d';
-      mm.lineWidth = 5;
+      mm.strokeStyle = '#3a2f22';
+      mm.lineWidth = 7;
       mm.beginPath();
       for (const edge of graph.edges) {
         const pts = edgePoints(edge, graph.nodes);
@@ -169,7 +174,10 @@ export function createHud() {
         mm.lineTo(toX(pts.b.x), toY(pts.b.z));
       }
       mm.stroke();
-      mm.strokeStyle = '#c8ccd4';
+      mm.strokeStyle = '#e8dcc0';
+      mm.lineWidth = 4;
+      mm.stroke();
+      mm.strokeStyle = '#fff3d6';
       mm.lineWidth = 2;
       mm.stroke();
     }
@@ -177,7 +185,11 @@ export function createHud() {
     const safe = normPoint(data.safehouse);
     if (safe && inView(safe.x, safe.z)) {
       mm.fillStyle = '#2ecc71';
-      mm.fillRect(toX(safe.x) - 4, toY(safe.z) - 4, 8, 8);
+      mm.beginPath();
+      mm.arc(toX(safe.x), toY(safe.z), 6, 0, Math.PI * 2);
+      mm.fill();
+      mm.fillStyle = '#fff';
+      mm.fillText('H', toX(safe.x), toY(safe.z));
     }
 
     const marker = normPoint(data.missionMarker);
@@ -198,6 +210,8 @@ export function createHud() {
       mm.lineTo(mx - 5, my);
       mm.closePath();
       mm.fill();
+      mm.fillStyle = '#11141b';
+      mm.fillText('?', mx, my);
     }
 
     const dots = (list, r) => {
@@ -241,16 +255,16 @@ export function createHud() {
 
     mm.restore();
 
-    mm.strokeStyle = 'rgba(238, 241, 245, 0.9)';
+    const gr = mm.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, '#2ec4b6');
+    gr.addColorStop(1, '#4f8ef7');
+    mm.strokeStyle = gr;
     mm.lineWidth = 2;
     mm.beginPath();
     mm.arc(cx, cy, r, 0, Math.PI * 2);
     mm.stroke();
     mm.fillStyle = '#eef1f5';
-    mm.font = 'bold 11px system-ui, sans-serif';
-    mm.textAlign = 'center';
-    mm.textBaseline = 'top';
-    mm.fillText('N', cx, 4);
+    mm.fillText('N', cx, 10);
   }
 
   function normalize(raw) {

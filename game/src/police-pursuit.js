@@ -27,8 +27,6 @@ export function hasLineOfSight(a, b, colliders) {
   return true;
 }
 
-// Pilih node jauh dari target: tier pertama yang punya kandidat menang
-// (tiers = [jarakMin, dotMax], dotMax null = tanpa syarat arah; top3 = acak dari 3 terjauh).
 function farNode(nodes, tp, vd, rand, tiers, top3) {
   const dist = (n) => Math.hypot(n.x - tp.x, n.z - tp.z);
   const dot = (n) => ((n.x - tp.x) * vd.x + (n.z - tp.z) * vd.z) / (dist(n) || 1);
@@ -92,7 +90,6 @@ export function createPolice(scene, graph, fleet, rng) {
     return Math.hypot(p.x - x, p.z - z) <= ROAD_BAND;
   }
 
-  // Batasi gerak unit ke pita 3,0 di sekitar centerline terdekat.
   function enforceRoadBand(unit, dt) {
     const car = unit.car;
     if (!car) return;

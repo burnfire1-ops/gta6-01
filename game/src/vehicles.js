@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
 const FALLBACK_TYPES = {
-  sedan:  { maxSpeed: 26, accel: 14, color: 0x9aa3ad },
+  sedan:  { maxSpeed: 26, accel: 14, color: 0xe8ecf0 },
   taxi:   { maxSpeed: 24, accel: 13, color: 0xf2c94c },
-  van:    { maxSpeed: 20, accel: 10, color: 0x7a8a99 },
-  pickup: { maxSpeed: 24, accel: 12, color: 0xb0563a },
-  sport:  { maxSpeed: 38, accel: 22, color: 0x14b8a6 },
-  police: { maxSpeed: 35, accel: 20, color: 0x14181d },
+  van:    { maxSpeed: 20, accel: 10, color: 0x7fd4ff },
+  pickup: { maxSpeed: 24, accel: 12, color: 0xff6b35 },
+  sport:  { maxSpeed: 38, accel: 22, color: 0x2ee6c8 },
+  police: { maxSpeed: 35, accel: 20, color: 0x2c4a6e },
 };
 
 function typeSpec(type) { return FALLBACK_TYPES[type] || FALLBACK_TYPES.sedan; }
@@ -64,6 +64,7 @@ export function buildCarMesh(type) {
   const g = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({
     color: new THREE.Color(spec.color), metalness: 0.55, roughness: 0.35,
+    emissive: spec.color, emissiveIntensity: 0.15,
   });
   const glass = new THREE.MeshStandardMaterial({ color: 0x16222e, metalness: 0.9, roughness: 0.15 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x0c0e11, roughness: 0.9 });
