@@ -22,7 +22,7 @@ function formatJam(t) {
 
 function normPoint(p) { if (!p || typeof p !== 'object') return null; return { x: typeof p.x === 'number' ? p.x : 0, z: typeof p.z === 'number' ? p.z : typeof p.y === 'number' ? p.y : 0 }; }
 
-function resolveEndpoint(end, nodes) { return normPoint(typeof end === 'number' ? (nodes ? nodes[end] : null) : end); }
+function resolveEndpoint(end, nodes) { return normPoint(typeof end === 'number' ? (nodes ? nodes.get(end) : null) : end); }
 
 function edgePoints(edge, nodes) {
   if (!edge) return null;
@@ -170,7 +170,7 @@ export function createHud() {
       mm.lineWidth = 7;
       mm.beginPath();
       for (const edge of graph.edges) {
-        const pts = edgePoints(edge, graph.nodes);
+        const pts = edgePoints(edge, graph.nodeById);
         if (!pts) continue;
         if (!inView(pts.a.x, pts.a.z) && !inView(pts.b.x, pts.b.z)) continue;
         mm.moveTo(toX(pts.a.x), toY(pts.a.z));
