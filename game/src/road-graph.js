@@ -51,11 +51,9 @@ export function createRoadGraph() {
       if (iz + 1 < n) addEdge(nodeId(ix, iz), nodeId(ix, iz + 1));
     }
   }
-  // Kantor polisi Boulevard (tanpa tanda, busted() jatuh ke nodes[0]).
   const stIx = coords.indexOf(-20);
   const stNode = stIx >= 0 ? nodeById.get(nodeId(stIx, stIx)) : null;
   if (stNode) stNode.policeStation = true;
-  // Safehouse: node (-100,-100).
   const shIx = coords.indexOf(-100);
   const shNode = shIx >= 0 ? nodeById.get(nodeId(shIx, shIx)) : null;
   if (shNode) shNode.safehouse = true;

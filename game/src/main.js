@@ -62,7 +62,6 @@ const police = createPolice(scene, graph, fleet, rng);
 const hud = createHud();
 const audio = createAudio();
 const saveSystem = createSaveSystem();
-// Satu ctx untuk semua subsistem.
 const ctx = {
   player,
   fleet,
@@ -87,7 +86,6 @@ const ctx = {
 const missions = createMissions(ctx);
 ctx.missions = missions;
 const packages = createPackages(scene, graph, rng);
-// CP24 M2: 4 mobil parkir mall (driver null, bisa dicuri; locked 25% kecuali sport).
 [[107, 'sport'], [112, 'sedan'], [128, 'taxi'], [133, 'van']].forEach(([px, pt]) => {
   const pc = fleet.spawnCar(pt, { x: px, z: -106 });
   pc.heading = 0;
@@ -112,8 +110,6 @@ const game = {
   camera,
   renderer,
   seed,
-  // CP24 M0 staging: ?shot= dihapus; script staging luar membekukan loop
-  // (setAnimationLoop(null)) lalu melanjutkannya lagi via hook ini.
   startLoop() { renderer.setAnimationLoop(frame); },
   state: { wanted: 0, money: MISSIONS.startMoney, health: player.health },
 };

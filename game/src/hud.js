@@ -158,8 +158,8 @@ export function createHud() {
 
     const graph = data.graph;
     if (graph && Array.isArray(graph.edges)) {
-      mm.strokeStyle = '#8b93a3';
-      mm.lineWidth = 2;
+      mm.strokeStyle = '#20283d';
+      mm.lineWidth = 5;
       mm.beginPath();
       for (const edge of graph.edges) {
         const pts = edgePoints(edge, graph.nodes);
@@ -168,6 +168,9 @@ export function createHud() {
         mm.moveTo(toX(pts.a.x), toY(pts.a.z));
         mm.lineTo(toX(pts.b.x), toY(pts.b.z));
       }
+      mm.stroke();
+      mm.strokeStyle = '#c8ccd4';
+      mm.lineWidth = 2;
       mm.stroke();
     }
 
@@ -198,12 +201,15 @@ export function createHud() {
     }
 
     const dots = (list, r) => {
+      mm.strokeStyle = '#eef1f5';
+      mm.lineWidth = 1.5;
       for (const it of list) {
-        const p = normPoint(it);
+        const p = normPoint(it && it.car ? it.car.pos : it);
         if (p && inView(p.x, p.z)) {
           mm.beginPath();
           mm.arc(toX(p.x), toY(p.z), r, 0, Math.PI * 2);
           mm.fill();
+          mm.stroke();
         }
       }
     };

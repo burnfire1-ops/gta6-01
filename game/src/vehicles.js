@@ -29,7 +29,6 @@ export function normalizeDriveInput(input) {
     out.handbrake = !!input.handbrake;
     return out;
   }
-  // CP18: axes live; forward +1 = W, strafe +1 = D; steer = -strafe.
   const ax = input.axes;
   if (ax && typeof ax === 'object') {
     const f = typeof ax.forward === 'number' ? ax.forward : 0;
@@ -74,7 +73,6 @@ export function buildCarMesh(type) {
   body.castShadow = true;
   g.add(body);
 
-  // M14: bemper + grille + spion (semua varian), pakai ulang material dark.
   const mk = (m, w, h, d, x, y, z) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); q.position.set(x, y, z); g.add(q); };
   mk(dark, 2.06, 0.22, 0.18, 0, 0.42, 2.14);
   mk(dark, 2.06, 0.22, 0.18, 0, 0.42, -2.14);
@@ -154,7 +152,10 @@ export function buildCarMesh(type) {
 }
 
 function syncMesh(car) {
-  car.mesh.position.set(car.pos.x, 0, car.pos.z);
+  // M27: mobil dikemudi -> lajur kiri +2.5 m (sticky _lane); traffic _t tidak.
+  if (car.driver) car._lane = 1;
+  const o = car._lane && !car._t ? 2.5 : 0;
+  car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, 0, car.pos.z - Math.sin(car.heading) * o);
   car.mesh.rotation.y = car.heading;
 }
 

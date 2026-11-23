@@ -45,7 +45,6 @@ export function createPedestrians(scene, graph, rng) {
   let lastCtx = null;
   let crimeSeq = 0;
   const pendingReports = [];
-  // M8: 2 geng Tier 1 — aliran rng sendiri (SEED+99) supaya rng utama netral.
   const grng = createRandom(SEED + 99);
   const GANGS = { dermaga: [0x8a1f1f, -160, 80], neon: [0x6a1f8a, 120, -120] };
   const OFF = [[-14.5, 14.5], [0, 14.5], [14.5, 14.5]];
@@ -66,9 +65,6 @@ export function createPedestrians(scene, graph, rng) {
     return { x: (rand() - 0.5) * 80, z: (rand() - 0.5) * 80 };
   }
 
-  // Rute trotoar (CP23): waypoint = sudut 5,125 sebelum tiap node (titik di node
-  // = aspal jalan silang); sisi sudut = yang paling dekat waypoint sebelumnya,
-  // jadi ruas demi ruas tetap di satu sisi trotoar. Deterministik; rng() utuh.
   function planRoute(w, target) {
     const pts = [target];
     if (!graph || !graph.nearestNode || !graph.findPathAStar || !graph.nodeById) return pts;
@@ -89,8 +85,6 @@ export function createPedestrians(scene, graph, rng) {
       return pick;
     };
     const wps = [];
-    // Sudut awal: arah datang = sepanjang ruas tempat walker berdiri (sumbu
-    // jalan); walker -> node langsung itu diagonal karena walker di trotoar.
     let din0 = U(prev, start);
     const p0 = graph.nearestPointOnGraph && graph.nearestPointOnGraph(w.pos.x, w.pos.z);
     const e0 = p0 && p0.edge, ea = e0 && nb(e0.a), eb = e0 && nb(e0.b);
@@ -99,7 +93,6 @@ export function createPedestrians(scene, graph, rng) {
     for (let i = 1; i < ids.length - 1; i += 1) {
       wps.push(corner(nb(ids[i]), U(nb(ids[i - 1]), nb(ids[i]))));
     }
-    // Sudut akhir di node tujuan (sebelum belok ke ruas target).
     wps.push(corner(goal, U(nb(ids[ids.length - 2]), goal)));
     wps.push(target);
     return wps;
@@ -305,7 +298,6 @@ export function createPedestrians(scene, graph, rng) {
         }
       }
 
-      // Push-out collider gedung (target di dalam collider diganti baru) + nudge tangensial.
       if (cols) for (const c of cols) {
         const dx = w.pos.x - c.x, dz = w.pos.z - c.z, r = c.r + 0.4;
         if (dx * dx + dz * dz < r * r) {

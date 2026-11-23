@@ -56,9 +56,7 @@ function roadTexture(){
  return t;}
 const gT=canvasTexture(64,64,(g)=>{g.fillStyle='#a8d64e';g.fillRect(0,0,64,64);g.fillStyle='#8fb83e';for(let i=32;i--;)g.fillRect(i*37%64,i*53%64,6,4);});gT.repeat.set(48,48);
 const sT=canvasTexture(64,64,(g)=>{g.fillStyle='#8f8570';g.fillRect(0,0,64,64);g.fillStyle='#e0bf7d';g.fillRect(4,0,56,64);g.fillStyle='#b39b62';for(let i=4;--i;){g.fillRect(i*16,0,2,64);g.fillRect(0,i*16,64,2);}});sT.repeat.set(3,10);
-// CP24 M1: 5 blok digusur (Opsi C). Klinik (120,160) tetap — sketsa §3.2 tulis 6/150, salah.
 const FACILITIES = { '120,-120': 'mall', '120,120': 'park', '-200,120': 'fair', '-160,80': 'industrial', '-80,-120': 'hospital' };
-// Bakar rng() sebanyak cabang generik (1 jumlah + 3/bangunan) — aliran sesudahnya identik.
 function burnRngForBlock(rng) {
   const count = rng() < 0.3 ? 2 : 1;
   for (let i = 0; i < count; i += 1) { rng(); rng(); rng(); }
@@ -218,8 +216,6 @@ export function buildCity(scene, graph, rng) {
     const mx = (a.x + b.x) / 2;
     const mz = (a.z + b.z) / 2;
     const angle = Math.atan2(b.x - a.x, b.z - a.z);
-    // CP24 M11: boulevard 13 m di ruas depan mall (z=-100), taman (z=100/140),
-    // bibir pantai (x=-220); ruas lain tetap 11 m.
     const B = (mz === -100 || mz === 100 || mz === 140) && mx >= 100 && mx <= 140 || mx === -220;
     const walk = K(new THREE.PlaneGeometry(B ? 13 : 11, len), sidewalkMat);
     walk.rotation.x = -P / 2;
