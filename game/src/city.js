@@ -84,8 +84,8 @@ function buildMall(group, colliders, boxGeo, neonMat) {
   pMat.userData.glow = true;
   const poleMat = MM({ color: 0x2c3444, roughness: 0.7, metalness: 0.4 });
   for (const px of [106, 134]) {
-    add(BM(poleMat), px, 1.5, -104, 0.3, 3, 0.3);
-    add(K(new THREE.PlaneGeometry(1.8, 1.8), pMat), px, 3.6, -104, 1, 1, 1);
+    add(BM(poleMat), px, 1.5, -106, 0.3, 3, 0.3);
+    add(K(new THREE.PlaneGeometry(1.8, 1.8), pMat), px, 3.6, -106, 1, 1, 1);
   }
   const lotTex = canvasTexture(128, 64, (g, w, h) => { g.fillStyle = '#2c3140'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4f1e6'; for (let i = 0; i <= 6; i += 1) g.fillRect(4 + i * 20, 6, 2, h - 12); });
   const lot = K(new THREE.PlaneGeometry(30, 12), MM({ map: lotTex, roughness: 0.95 }));
@@ -96,7 +96,7 @@ function buildMall(group, colliders, boxGeo, neonMat) {
   colliders.push({ x: 120, z: -124, r: 18 });
 }
 const PARK_TREES = [[108,108],[132,108],[108,132],[112,110],[128,110],[110,128],[124,130],[114,133]];
-const FAIR_PALMS = [[-224,104],[-224,118],[-224,132],[-224,142]];
+const FAIR_PALMS = [[-226,104],[-227,112],[-226,132],[-226,142]];
 function buildFair(g,c,b){
  const A=(mt,x,y,z,sx,sy,sz,rz)=>{const m=K(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);if(rz)m.rotation.z=rz;g.add(m);return m;};
  A(MM({color:0xe8c98a}),-200,0.06,120,30,0.1,30).receiveShadow=true;
@@ -115,7 +115,7 @@ function buildFair(g,c,b){
  const cp=K(new THREE.CylinderGeometry(0.3,0.3,4.4,8),sm);cp.position.y=2.2;ct.add(cp);
  const rf=K(new THREE.ConeGeometry(4.6,2.4,8),MM({color:0xff1f8a,roughness:0.6}));rf.position.y=5.2;ct.add(rf);
  for(let i=0;i<4;i++){const a=i*P/2;const h=K(b,MM({color:gc[i],roughness:0.6}));h.scale.set(0.8,1.6,0.8);h.position.set(Math.cos(a)*2.6,1.6,Math.sin(a)*2.6);ct.add(h);}
- for(const [x,z] of [[-224,110],[-224,126],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=K(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
+ for(const [x,z] of [[-227,110],[-227,126],[-227,138]]){A(MM({color:0x8a6a4a}),x,1,z,0.2,2,0.2);const u=K(new THREE.ConeGeometry(1.8,1,8),MM({color:0xff5a5a,roughness:0.7}));u.position.set(x,2.4,z);g.add(u);}
  c.push({x:-200,z:120,r:8},{x:-188,z:108,r:5});
 }
 function buildPark(g, c, b) {
@@ -170,15 +170,15 @@ const SHOPS={'80,-120':['KOPI','#ff8a3d'],'80,120':['WARUNG','#2ec96a'],'-40,-12
 function buildStreet(g,b){
  const A=(mt,x,y,z,sx,sy,sz)=>{const m=K(b,mt);m.scale.set(sx,sy,sz);m.position.set(x,y,z);g.add(m);};
  const dk=MM({color:0x2c3444});
- for(const [x,z] of [[108,-105.8],[128,105.8]]){
+ for(const [x,z] of [[108,-106.8],[128,106.8]]){
   A(MM({color:0x7a5a3a}),x,.7,z,1.8,1,1.2);
   A(MM({color:0xff8a3d}),x,1.5,z,2,.15,1.4);
   A(dk,x,.3,z,1.65,.6,.25);
  }
  const t=textTex(512,128,'#101a33','#ffd166','bold 64px system-ui, sans-serif','TELUK CAHAYA');
  const bm=MM({map:t,emissiveMap:t,emissive:0xffffff});bm.userData.glow=true;
- for(const px of [146,150])A(dk,px,2.5,-105.5,.4,5,.4);
- const p=K(new THREE.PlaneGeometry(10,2.5),bm);p.position.set(148,6.5,-105.5);g.add(p);
+ for(const px of [146,150])A(dk,px,2.5,-106,.4,5,.4);
+ const p=K(new THREE.PlaneGeometry(10,2.5),bm);p.position.set(148,6.5,-106);g.add(p);
 }
 export function buildCity(scene, graph, rng) {
   const colliders = [];
@@ -383,7 +383,7 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
       const t = 0.25 + rng() * 0.5;
       const px = a.x + (b.x - a.x) * t;
       const pz = a.z + (b.z - a.z) * t;
-      const side = rng() < 0.5 ? 5.6 : -5.6;
+      const side = rng() < 0.5 ? 6.6 : -6.6;
       const along = Math.atan2(b.x - a.x, b.z - a.z);
       palmSpots.push({ x: px + Math.cos(along) * side, z: pz - Math.sin(along) * side });
     }
@@ -420,8 +420,8 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   const poles = new THREE.InstancedMesh(poleGeo, poleMat, Math.max(1, lampNodes.length));
   const headGeo = new THREE.SphereGeometry(0.42, 8, 6);
   lampNodes.forEach((nd, i) => {
-    const lx = nd.x + 4.6;
-    const lz = nd.z + 4.6;
+    const lx = nd.x + 6.6;
+    const lz = nd.z + 6.6;
     m4.makeTranslation(lx, 2.6, lz);
     poles.setMatrixAt(i, m4);
     const head = K(headGeo, lampHeadMat);
@@ -441,13 +441,13 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   for (const [sx, sz] of [[-180, -180], [180, -180], [-180, 180], [180, 180], [20, 20]]) {
     const pole = K(poleGeo, poleMat);
     pole.scale.set(1, 0.6, 1);
-    pole.position.set(sx + 4.6, 1.6, sz + 4.6);
+    pole.position.set(sx + 6.6, 1.6, sz + 6.6);
     group.add(pole);
     const sign = K(
       new THREE.PlaneGeometry(2.2, 2.2),
       MM({ map: signTex, side: THREE.DoubleSide, roughness: 0.8 }),
     );
-    sign.position.set(sx + 4.6, 3.6, sz + 4.6);
+    sign.position.set(sx + 6.6, 3.6, sz + 6.6);
     group.add(sign);
   }
   for (let i = 0; i < 14; i += 1) {

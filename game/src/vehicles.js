@@ -148,14 +148,13 @@ export function buildCarMesh(type) {
   blob.position.y = 0.08;
   g.add(blob);
   g.userData.wheels = wheels;
-  g.userData.type = type;
   return g;
 }
 
 function syncMesh(car) {
   if (car.driver) car._lane = 1;
   const o = car._lane && !car._t ? 2.5 : 0;
-  car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, 0, car.pos.z - Math.sin(car.heading) * o);
+  car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, car.pos.x<-224&&car.pos.x>-300&&Math.abs(car.pos.z-120)<5?1.8:0, car.pos.z - Math.sin(car.heading) * o);
   car.mesh.rotation.y = car.heading;
 }
 
@@ -260,7 +259,6 @@ export function createVehicleFleet(scene, graph, rng) {
       maxSpeed: spec.maxSpeed,
       accel: spec.accel,
       driver: null,
-      locked: false,
       color: spec.color,
       sirenOn: false,
       blinkT: 0,
@@ -294,7 +292,6 @@ export function createVehicleFleet(scene, graph, rng) {
     const base = resolvePos();
     const a = rand() * Math.PI * 2;
     const car = spawnCar(t, { x: base.x + Math.cos(a) * 5, z: base.z + Math.sin(a) * 5 });
-    car.locked = t !== 'sport' && rand() < 0.25;
   }
 
   function update(dt, ctx) {

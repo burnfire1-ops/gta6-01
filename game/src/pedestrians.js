@@ -35,7 +35,6 @@ export function buildWalkerMesh(color) {
   legL.geometry.translate(0, -0.3, 0);
   legR.geometry.translate(0, -0.3, 0);
   g.add(legL, legR);
-  g.userData.type = 'walker';
   return g;
 }
 

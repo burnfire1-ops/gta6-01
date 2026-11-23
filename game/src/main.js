@@ -89,7 +89,6 @@ const packages = createPackages(scene, graph, rng);
 [[107, 'sport'], [112, 'sedan'], [128, 'taxi'], [133, 'van']].forEach(([px, pt]) => {
   const pc = fleet.spawnCar(pt, { x: px, z: -106 });
   pc.heading = 0;
-  pc.locked = pt !== 'sport' && rng() < 0.25;
 });
 const bigMap = createBigMap($('bigmap'));
 

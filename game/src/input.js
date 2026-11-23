@@ -4,7 +4,6 @@ export const ACTION_PAUSE = 2;
 export const ACTION_INTERACT = 4;
 export const ACTION_JUMP = 8;
 export const ACTION_ATTACK = 32;
-export const ACTION_HANDBRAKE = 16;
 export const ACTION_MAP = 64;
 
 const FORWARD_KEYS = new Set(['KeyW', 'ArrowUp']);
@@ -26,7 +25,7 @@ export function createInput(canvas) {
 
   function press(code) {
     if (INTERACT_KEYS.has(code)) actions |= ACTION_INTERACT;
-    else if (JUMP_KEYS.has(code)) actions |= ACTION_JUMP | ACTION_HANDBRAKE;
+    else if (JUMP_KEYS.has(code)) actions |= ACTION_JUMP;
     else if (PAUSE_KEYS.has(code)) actions |= ACTION_PAUSE;
     else if (MAP_KEYS.has(code)) actions |= ACTION_MAP;
     else if (CONFIRM_KEYS.has(code)) actions |= ACTION_CONFIRM;
