@@ -153,7 +153,7 @@ export function buildCarMesh(type) {
 }
 
 function syncMesh(car) {
-  // M27: mobil dikemudi -> lajur kiri +2.5 m (sticky _lane); traffic _t tidak.
+  // M27: mobil dikemudi offset kiri 2.5 m (sticky); traffic tidak.
   if (car.driver) car._lane = 1;
   const o = car._lane && !car._t ? 2.5 : 0;
   car.mesh.position.set(car.pos.x + Math.cos(car.heading) * o, 0, car.pos.z - Math.sin(car.heading) * o);

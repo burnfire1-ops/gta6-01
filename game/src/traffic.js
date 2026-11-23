@@ -6,28 +6,29 @@ const LANE = 2.5; // offset lajur kanan dari as jalan (CP17)
 const CAR_GAP = 4.4; // jarak pusat minimum antar mobil (CP17)
 let sepFrame = 0;
 
-// Dorong-pisah mobil bergerak (CP17); parkir (driver null) dikecualikan.
+// Dorong-pisah (CP17+M29a): parkir diam.
 function separateCars(cars) {
   sepFrame++;
   for (let i = 0; i < cars.length; i++) {
     const a = cars[i];
-    if (!a || a.driver == null || !a.pos) continue;
+    if (!a || !a.pos) continue;
     for (let j = i + 1; j < cars.length; j++) {
       const b = cars[j];
-      if (!b || b.driver == null || !b.pos) continue;
+      if (!b || !b.pos) continue;
+      if (!a.driver && !b.driver) continue;
       const dx = b.pos.x - a.pos.x;
       const dz = b.pos.z - a.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 >= CAR_GAP * CAR_GAP || d2 < 1e-8) continue;
       const d = Math.sqrt(d2);
       const nx = dx / d, nz = dz / d;
-      const push = (CAR_GAP - d) / 2;
-      a.pos.x -= nx * push; a.pos.z -= nz * push;
-      b.pos.x += nx * push; b.pos.z += nz * push;
+      const push = (CAR_GAP - d) / (a.driver && b.driver ? 2 : 1);
+      if (a.driver) { a.pos.x -= nx * push; a.pos.z -= nz * push; }
+      if (b.driver) { b.pos.x += nx * push; b.pos.z += nz * push; }
       const avx = Math.sin(a.heading) * a.speed, avz = Math.cos(a.heading) * a.speed;
       const bvx = Math.sin(b.heading) * b.speed, bvz = Math.cos(b.heading) * b.speed;
       const closing = (avx - bvx) * nx + (avz - bvz) * nz;
-      if (closing > 6) {
+      if (closing > 6 && a.driver && b.driver) {
         if (sepFrame - (a._sepDmg || 0) > 30) {
           a.health = Math.max(0, a.health - Math.min(15, (closing - 6) * 1.2));
           a._sepDmg = sepFrame;
@@ -97,7 +98,6 @@ export function createTraffic(scene, graph, fleet, rng) {
       state: 'route',
       blockedTimer: 0,
       pullTarget: null,
-      repathTimer: 0,
     };
     newRoute(car);
     cars.push(car);
@@ -111,9 +111,11 @@ export function createTraffic(scene, graph, fleet, rng) {
       const dx = other.pos.x - car.pos.x;
       const dz = other.pos.z - car.pos.z;
       const d = Math.hypot(dx, dz);
-      if (d < 8 && d > 0.01) {
+      if (d < 14 && d > 0.01) {
         const dot = (dx * fx + dz * fz) / d;
-        if (dot > 0.7) return other;
+        const lat = dx * fz - dz * fx;
+        if (d < 8 && dot > 0.7 && Math.abs(lat) < 4) return other;
+        if (dot > -0.2 && other.speed > 0.5 && lat > 0) return other;
       }
     }
     return null;
@@ -183,6 +185,7 @@ export function createTraffic(scene, graph, fleet, rng) {
         } catch (e) {  }
       }
       if (carAhead(car)) wantSpeed = 0;
+      if (t.turn && wantSpeed > 5) wantSpeed = 5;
 
       if (car.speed < 0.5 && !atRedLight) {
         t.blockedTimer += d;
@@ -197,7 +200,6 @@ export function createTraffic(scene, graph, fleet, rng) {
 
       car.speed += clamp(wantSpeed - car.speed, -14 * d, 8 * d);
       if (car.speed < 0.05) car.speed = 0;
-      // Lajur kanan (CP17): waypoint digeser 2,5 ke kanan ruas.
       const pv = t.wp > 0 ? nodePos(graph, t.route[t.wp - 1]) : null;
       let ux = dx, uz = dz;
       if (pv && (wpNode.x !== pv.x || wpNode.z !== pv.z)) {
@@ -206,8 +208,10 @@ export function createTraffic(scene, graph, fleet, rng) {
       } else {
         const dl = dist || 1; ux = dx / dl; uz = dz / dl;
       }
+      const o = car.heading;
       car.heading = turnToward(car.heading,
         Math.atan2(wpNode.x + uz * LANE - car.pos.x, wpNode.z - ux * LANE - car.pos.z), 2.2 * d);
+      t.turn = Math.abs(car.heading - o) > 1.5 * d;
       advance(car, d);
     }
     separateCars(fleet.cars);
