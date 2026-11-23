@@ -177,8 +177,8 @@ function buildStreet(g,b){
  }
  const t=textTex(512,128,'#101a33','#ffd166','bold 64px system-ui, sans-serif','TELUK CAHAYA');
  const bm=MM({map:t,emissiveMap:t,emissive:0xffffff});bm.userData.glow=true;
- for(const px of [142,146])A(dk,px,2.5,-105.5,.4,5,.4);
- const p=K(new THREE.PlaneGeometry(10,2.5),bm);p.position.set(144,6.5,-105.5);g.add(p);
+ for(const px of [146,150])A(dk,px,2.5,-105.5,.4,5,.4);
+ const p=K(new THREE.PlaneGeometry(10,2.5),bm);p.position.set(148,6.5,-105.5);g.add(p);
 }
 export function buildCity(scene, graph, rng) {
   const colliders = [];
@@ -325,14 +325,14 @@ for(const [x,z,a] of [[108,-100,1],[28,-20,1],[108,100,1],[-92,-100,1],[-180,112
   colliders.push({ x: 0, z: 0, r: 16 });
   const bridgeMat = MM({ color: 0x8a7f72, roughness: 0.9 });
   const bridge = K(boxGeo, bridgeMat);
-  bridge.scale.set(84, 1.2, 10);
-  bridge.position.set(-260, 1.2, 120);
+  bridge.scale.set(76, 1.2, 10);
+  bridge.position.set(-262, 1.2, 120);
   bridge.castShadow = true;
   group.add(bridge);
   for (const dz of [-5.4, 5.4]) {
     const rail = K(boxGeo, MM({ color: 0xffd166, roughness: 0.6 }));
-    rail.scale.set(84, 1, 0.4);
-    rail.position.set(-260, 2.2, 120 + dz);
+    rail.scale.set(76, 1, 0.4);
+    rail.position.set(-262, 2.2, 120 + dz);
     group.add(rail);
   }
   const island = K(
